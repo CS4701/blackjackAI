@@ -6,13 +6,13 @@ import random
 class Params():
   def __init__(self):
   # 'input', 'random_policy', 'fixed_policy'
-    self.action_type = 'input'
+    self.action_type = 'fixed_policy'
   # Only used for 'random_policy' or 'fixed_policy' input
     self.num_games = 20000
   # Filepath to fixed policy file (only used for 'fixed_policy' input)
-    self.fixed_policy_filepath = os.path.join(os.getcwd(), 'Value_Iteration_Policy_2.policy')
+    self.fixed_policy_filepath = os.path.join(os.getcwd(), 'Sarsa_Policy_1.policy')
   # Which state mapping algorithm to use (1 or 2)
-    self.state_mapping = 2
+    self.state_mapping = 1
     return
 
 """
@@ -42,6 +42,41 @@ State 22 - players hand sums to 5, dealers hand is 2
 ...
 State 181 - players hand sums to 20, dealers hand is 10
 State 182 - players hand sums to 21, dealers hand is 10
+
+-------------------------------------------------------------------------------
+State Mapping 3: (need to add new states for card counting) state should now be about 54 * 180
+
+State 0 - lose state
+State 1 - win state
+State 2 - terminal state
+State 3 - players hand sums to 4, dealers hand is 1, 
+State 4 - players hand sums to 5, dealers hand is 1, 
+...
+State 19 - players hand sums to 20, dealers hand is 1
+State 20 - players hand sums to 21, dealers hand is 1
+State 21 - players hand sums to 4, dealers hand is 2
+State 22 - players hand sums to 5, dealers hand is 2
+...
+State 181 - players hand sums to 20, dealers hand is 10
+State 182 - players hand sums to 21, dealers hand is 10
+...
+State 183 - players has Ace and 2, dealers hand is 1,
+State 184 - players has Ace and 3, dealers hand is 1,
+...
+State 189 - player has Ace and 8, dealers hand is 1
+State 190 - players has Ace and 9, dealers hand is 1
+State 191 - players has Ace and 2, dealers hand is 2
+State 192 - players has Ace and 3, dealers hand is 2
+...
+State 263 - player has Ace and 2, dealers hand is Ace
+State 264 - players has Ace and 3, dealers hand is Ace
+...
+State 269 - players has Ace and 8, dealers hand is Ace,
+State 270 - players has Ace and 9, dealers hand is Ace,
+...
+
+
+
 """
 
 class BlackJack_game():
@@ -84,7 +119,7 @@ class BlackJack_game():
   # Draw random card from deck
   def draw_card(self):
     return self.deck.pop()
-    # Dras random hand (2 random cards from deck)
+    # Draws random hand (2 random cards from deck)
 
 
   def draw_hand(self):
@@ -120,11 +155,11 @@ class BlackJack_game():
       return False
 
 # Map the current player's hand to a state index
-  def hand_to_state(self, player, dealer):
+  def hand_to_state(self, player_hand, dealer):
     if self.state_mapping == 1:
-      return self.sum_hand(player) - 1
+      return self.sum_hand(player_hand) - 1
     elif self.state_mapping == 2:
-      return (self.sum_hand(player) - 1) + (18 * (dealer[0] - 1))
+      return (self.sum_hand(player_hand) - 1) + (18 * (dealer[0] - 1))
 
 
 # Get reward based off of current state and action (may get rid of this
