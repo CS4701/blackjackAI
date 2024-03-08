@@ -10,9 +10,10 @@ class Params():
   # Only used for 'random_policy' or 'fixed_policy' input
     self.num_games = 20000
   # Filepath to fixed policy file (only used for 'fixed_policy' input)
-    self.fixed_policy_filepath = os.path.join(os.getcwd(), 'Sarsa_Policy_1.policy')
+    self.fixed_policy_filepath = os.path.join(os.getcwd(), 'math_policy.policy')
+    # self.fixed_policy_filepath = os.path.join(os.getcwd(), 'QLearning_policy_mapping_2.policy') 
   # Which state mapping algorithm to use (1 or 2)
-    self.state_mapping = 1
+    self.state_mapping = 3
     return
 
 """
@@ -63,16 +64,13 @@ State 182 - players hand sums to 21, dealers hand is 10
 State 183 - players has Ace and 2, dealers hand is 1,
 State 184 - players has Ace and 3, dealers hand is 1,
 ...
-State 189 - player has Ace and 8, dealers hand is 1
 State 190 - players has Ace and 9, dealers hand is 1
-State 191 - players has Ace and 2, dealers hand is 2
-State 192 - players has Ace and 3, dealers hand is 2
+State 191 - players has Ace and 10, dealers hand is 1
+State 192 - players has Ace and 2, dealers hand is 2
+State 193 - players has Ace and 3, dealers hand is 2
 ...
-State 263 - player has Ace and 2, dealers hand is Ace
-State 264 - players has Ace and 3, dealers hand is Ace
-...
-State 269 - players has Ace and 8, dealers hand is Ace,
-State 270 - players has Ace and 9, dealers hand is Ace,
+State 271 - player has Ace and 9, dealers hand is 10
+State 272 - players has Ace and 10, dealers hand is 10
 ...
 
 
@@ -160,6 +158,12 @@ class BlackJack_game():
       return self.sum_hand(player_hand) - 1
     elif self.state_mapping == 2:
       return (self.sum_hand(player_hand) - 1) + (18 * (dealer[0] - 1))
+    elif self.state_mapping == 3:
+      if self.usable_ace(player_hand) and len(player_hand) <= 2:
+        return 181 + (self.sum_hand(player_hand) - 11) + (9 * (dealer[0] - 1))
+      else:
+        return (self.sum_hand(player_hand) - 1) + (18 * (dealer[0] - 1))
+        
 
 
 # Get reward based off of current state and action (may get rid of this
