@@ -102,6 +102,7 @@ class BlackJack_game():
     # Also do not need to change these
     self.lose_reward = -10
     self.win_reward = 10
+    self.run_count = 0
     return
 
 
@@ -151,6 +152,29 @@ class BlackJack_game():
       return True
     else:
       return False
+    
+  #card counting state helper function
+  def encode_state(self, player_hand, dealer_up, run_count):
+    # Encode the state as a unique integer
+
+    # Calculate the run_count based on the player's initial hand and the dealer's up card
+    for card in player_hand:
+        if card >= 10 and card <= 1:
+            run_count -= 1
+        elif card in [7, 8, 9]:
+            pass
+        else:
+            run_count += 1
+
+    if dealer_up >= 10 and dealer_up <= -1:
+        run_count += 1
+    elif dealer_up in [7, 8, 9]:
+        pass
+    else:
+        run_count -= 1
+
+    return self.sum_hand(self, player_hand) + dealer_up * 21 + (run_count + 10) * 21 * 21
+
 
 # Map the current player's hand to a state index
   def hand_to_state(self, player_hand, dealer):
@@ -163,6 +187,8 @@ class BlackJack_game():
         return 181 + (self.sum_hand(player_hand) - 11) + (9 * (dealer[0] - 1))
       else:
         return (self.sum_hand(player_hand) - 1) + (18 * (dealer[0] - 1))
+    elif self.state_mapping == 4:
+      return self.encode_state(player_hand, dealer[0], self.run_count)
         
 
 
