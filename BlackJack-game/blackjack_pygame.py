@@ -3,6 +3,7 @@ from blackjack_deck import *
 from constants import *
 import sys
 import time
+import os
 pygame.init()
 
 clock = pygame.time.Clock()
@@ -24,12 +25,19 @@ def end_text_objects(text, font, color):
 
 
 #game text display
-def game_texts(text, x, y):
+def game_texts(text, x, y, ai=False):
     TextSurf, TextRect = text_objects(text, textfont)
     TextRect.center = (x, y)
     gameDisplay.blit(TextSurf, TextRect)
 
     pygame.display.update()
+    if ai:
+        pygame.time.delay(2000)  # Add a delay for the specified time
+
+        # Clear the text after the delay
+        TextSurf.fill((0, 0, 0))  # Fill the surface with black to clear the text
+        pygame.display.update()
+
 
  
 def game_finish(text, x, y, color):
@@ -59,20 +67,42 @@ def button(msg, x, y, w, h, ic, ac, action=None):
     TextRect.center = ((x + (w/2)), (y + (h/2)))
     gameDisplay.blit(TextSurf, TextRect)
 
+class Params():
+  def __init__(self):
+  # 'input', 'random_policy', 'fixed_policy'
+    self.action_type = 'fixed_policy'
+  # Only used for 'random_policy' or 'fixed_policy' input
+    self.num_games = 20000
+    # Get the parent directory of the current working directory
+    parent_directory = os.path.dirname(os.getcwd())
 
+    # Combine parent directory with the relative path to the policy file
+    policy_file_path = os.path.join(parent_directory, 'QLearning_policy_mapping_2.policy')
+  # Filepath to fixed policy file (only used for 'fixed_policy' input)
+    self.fixed_policy_filepath = policy_file_path
+    # self.fixed_policy_filepath = os.path.join(os.getcwd(), 'QLearning_policy_mapping_2.policy') 
+  # Which state mapping algorithm to use (1 or 2)
+    self.state_mapping = 2
+    return
+  
 class Play:
-    def __init__(self):
+    def __init__(self, params = None):
         self.deck = Deck()
         self.dealer = Hand()
         self.player = Hand()
         self.deck.shuffle()
+        if params:
+            self.action_type = params.action_type
+            self.fixed_policy_filepath = params.fixed_policy_filepath
+            self.policy = self.load_policy()
+            self.state_mapping = params.state_mapping
         
     def blackjack(self):
 
         self.dealer.calc_hand()
         self.player.calc_hand()
 
-        show_dealer_card = pygame.image.load('BlackJack-master/img/' + self.dealer.card_img[1] + '.png').convert()
+        show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
         
         if self.player.value == 21 and self.dealer.value == 21:
             gameDisplay.blit(show_dealer_card, (550, 200))
@@ -92,6 +122,54 @@ class Play:
             
         self.player.value = 0
         self.dealer.value = 0
+    
+    # Load policy from input .policy file into self.policy
+    def load_policy(self):
+    # Policy not needed if a user is playing or a random policy is being used
+        if self.action_type in ['random_policy', 'input']:
+            return None
+    # Read policy file and extract policy
+        f = open(self.fixed_policy_filepath, 'r')
+        data = f.read()
+        data = data.split()
+        policy = [int(x) for x in data]
+        return policy
+    
+    def hand_to_state(self):
+        self.dealer.calc_hand()
+        self.player.calc_hand()
+
+        # if self.state_mapping == 1:
+        #  return self.sum_hand(player_hand) - 1
+
+        if self.state_mapping == 2:
+            return (self.player.value- 1) + (18 * (self.dealer.get_dealer_card() - 1))
+        elif self.state_mapping == 3:
+         if self.player.usable_ace() and len(self.player.cards) <= 2:
+            return 181 + (self.player.value - 11) + (9 * (self.dealer.get_dealer_card() - 1))
+         else:
+            return (self.player.value - 1) + (18 * (self.dealer.get_dealer_card() - 1))
+        
+        self.player.value = 0
+        self.dealer.value = 0
+        
+    
+    def policy_run(self):
+        if not self.dealer.cards:
+           return
+
+        state = self.hand_to_state()
+        action = self.policy[state]
+
+        time.sleep(2)
+        if action: # hit: add a card to players hand and return
+            game_texts('AI Hitting', 500,650, True)
+            self.hit()
+        else: # stick: play out the dealers hand, and score
+            game_texts('AI standing', 500,650, True)
+
+            self.stand()
+
 
     def deal(self):
         for i in range(2):
@@ -105,11 +183,11 @@ class Play:
         self.dealer.display_cards()
         self.player.display_cards()
         self.player_card = 1
-        dealer_card = pygame.image.load('BlackJack-master/img/' + self.dealer.card_img[0] + '.png').convert()
-        dealer_card_2 = pygame.image.load('BlackJack-master/img/back.png').convert()
+        dealer_card = pygame.image.load('img/' + self.dealer.card_img[0] + '.png').convert()
+        dealer_card_2 = pygame.image.load('img/back.png').convert()
             
-        player_card = pygame.image.load('BlackJack-master/img/' + self.player.card_img[0] + '.png').convert()
-        player_card_2 = pygame.image.load('BlackJack-master/img/' + self.player.card_img[1] + '.png').convert()
+        player_card = pygame.image.load('img/' + self.player.card_img[0] + '.png').convert()
+        player_card_2 = pygame.image.load('img/' + self.player.card_img[1] + '.png').convert()
 
         
         game_texts("Dealer's hand is:", 500, 150)
@@ -133,17 +211,17 @@ class Play:
         if self.player_card == 2:
             self.player.calc_hand()
             self.player.display_cards()
-            player_card_3 = pygame.image.load('BlackJack-master/img/' + self.player.card_img[2] + '.png').convert()
+            player_card_3 = pygame.image.load('img/' + self.player.card_img[2] + '.png').convert()
             gameDisplay.blit(player_card_3, (520, 450))
 
         if self.player_card == 3:
             self.player.calc_hand()
             self.player.display_cards()
-            player_card_4 = pygame.image.load('BlackJack-master/img/' + self.player.card_img[3] + '.png').convert()
+            player_card_4 = pygame.image.load('img/' + self.player.card_img[3] + '.png').convert()
             gameDisplay.blit(player_card_4, (630, 450))
                 
         if self.player.value > 21:
-            show_dealer_card = pygame.image.load('BlackJack-master/img/' + self.dealer.card_img[1] + '.png').convert()
+            show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
             gameDisplay.blit(show_dealer_card, (550, 200))
             game_finish("You Busted!", 500, 250, red)
             time.sleep(4)
@@ -159,7 +237,7 @@ class Play:
         # print("standing")
         # print(self.dealer.card_img)
         # print()
-        show_dealer_card = pygame.image.load('BlackJack-master/img/' + self.dealer.card_img[1] + '.png').convert()
+        show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
         gameDisplay.blit(show_dealer_card, (550, 200))
         self.blackjack()
         self.dealer.calc_hand()
@@ -193,9 +271,11 @@ class Play:
         gameDisplay.fill(background_color)
         pygame.draw.rect(gameDisplay, grey, pygame.Rect(0, 0, 250, 700))
         pygame.display.update()
+    
+    
 
-        
-play_blackjack = Play()
+params = Params()     
+play_blackjack = Play(params)
 
 running = True
 
@@ -208,5 +288,10 @@ while running:
         button("Hit", 30, 200, 150, 50, light_slat, dark_slat, play_blackjack.hit)
         button("Stand", 30, 300, 150, 50, light_slat, dark_slat, play_blackjack.stand)
         button("EXIT", 30, 500, 150, 50, light_slat, dark_red, play_blackjack.exit)
+
+        if params.action_type == 'fixed_policy':
+           
+            play_blackjack.policy_run()
+            # time.sleep(5)
     
     pygame.display.flip()

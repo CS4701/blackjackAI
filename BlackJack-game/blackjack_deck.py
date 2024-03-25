@@ -27,6 +27,19 @@ class Hand(Deck):
 
     def add_card(self, card):
         self.cards.append(card)
+    
+    def useable_ace(self):
+        total = 0
+        first_card_index = [a_card[0] for a_card in self.cards]
+        non_aces = [c for c in first_card_index if c != 'A']
+        aces = [c for c in first_card_index if c == 'A']
+
+        for card in non_aces:
+            if card in 'JQK':
+                total += 10
+            else:
+                total += int(card)
+        return len(aces) >= 1 and total + 10 <= 21
 
     def calc_hand(self):
         first_card_index = [a_card[0] for a_card in self.cards]
@@ -44,6 +57,16 @@ class Hand(Deck):
                 self.value += 11
             else:
                 self.value += 1
+    
+    def get_dealer_card(self):
+        first_card = self.cards[0]
+        value = first_card[0]
+        if value in 'JQK':
+            return 10
+        elif value == 'A':
+            return 1
+        else:
+            return int(value)
 
 
     def display_cards(self):
