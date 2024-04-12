@@ -35,7 +35,7 @@ def game_texts(text, x, y, ai=False):
         pygame.time.delay(2000)  # Add a delay for the specified time
 
         # Clear the text after the delay
-        TextSurf.fill((0, 0, 0))  # Fill the surface with black to clear the text
+        pygame.draw.rect(gameDisplay,background_color , TextRect)  # Draw a black rectangle over the text
         pygame.display.update()
 
 
