@@ -6,16 +6,20 @@ import time
 import os
 pygame.init()
 
+
 clock = pygame.time.Clock()
 
 gameDisplay = pygame.display.set_mode((display_width, display_height))
-
+CARD_WIDTH = pygame.image.load('img/2C.png').convert().get_width()  
+CARD_HEIGHT = pygame.image.load('img/2C.png').convert().get_height()  
+CARD_SPACING = 20 
 pygame.display.set_caption('BlackJack')
 gameDisplay.fill(background_color)
-pygame.draw.rect(gameDisplay, grey, pygame.Rect(0, 0, 250, 700))
+# pygame.draw.rect(gameDisplay, grey, pygame.Rect(0, 0, 250, 700))
 
 ###text object render
 def text_objects(text, font):
+    font = pygame.font.Font(None, 16)
     textSurface = font.render(text, True, black)
     return textSurface, textSurface.get_rect()
 
@@ -96,7 +100,32 @@ class Play:
             self.fixed_policy_filepath = params.fixed_policy_filepath
             self.policy = self.load_policy()
             self.state_mapping = params.state_mapping
-        
+
+    def clear_card_areas(self, start_x, start_y, width):
+        gameDisplay.fill(background_color, rect=[start_x, start_y, width, CARD_HEIGHT])
+        pygame.display.update()
+
+    def draw_cards(self, card_images, player, show_dealer=False):
+            num_cards = len(card_images)
+            total_width = num_cards * CARD_WIDTH + (num_cards - 1) * CARD_SPACING
+            start_x = (display_width - total_width) / 2  # Start so that cards are centered
+            if player == 0:
+                start_y = 80
+            else:
+                start_y = display_height/2
+            self.clear_card_areas(start_x, start_y, total_width)
+
+
+
+
+            for i in range(len(card_images)):
+                if i == 1 and player == 0 and show_dealer == False:
+                    continue
+                card_image = pygame.image.load('img/' + card_images[i] + '.png').convert()
+                gameDisplay.blit(card_image, (start_x + i * (CARD_WIDTH + CARD_SPACING), start_y))
+
+            pygame.display.update()
+
     def blackjack(self):
 
         self.dealer.calc_hand()
@@ -105,17 +134,20 @@ class Play:
         show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
         
         if self.player.value == 21 and self.dealer.value == 21:
-            gameDisplay.blit(show_dealer_card, (550, 200))
+            # gameDisplay.blit(show_dealer_card, (550, 200))
+            self.draw_cards(self.dealer.card_img, 0, True)
             black_jack("Both with BlackJack!", 500, 250, grey)
             time.sleep(4)
             self.play_or_exit()
         elif self.player.value == 21:
-            gameDisplay.blit(show_dealer_card, (550, 200))
+            # gameDisplay.blit(show_dealer_card, (550, 200))
+            self.draw_cards(self.dealer.card_img, 0, True)
             black_jack("You got BlackJack!", 500, 250, green)
             time.sleep(4)
             self.play_or_exit()
         elif self.dealer.value == 21:
-            gameDisplay.blit(show_dealer_card, (550, 200))
+            # gameDisplay.blit(show_dealer_card, (550, 200))
+            self.draw_cards(self.dealer.card_img, 0, True)
             black_jack("Dealer has BlackJack!", 500, 250, red)
             time.sleep(4)
             self.play_or_exit()
@@ -183,62 +215,57 @@ class Play:
         self.dealer.display_cards()
         self.player.display_cards()
         self.player_card = 1
-        dealer_card = pygame.image.load('img/' + self.dealer.card_img[0] + '.png').convert()
-        dealer_card_2 = pygame.image.load('img/back.png').convert()
+        # dealer_card = pygame.image.load('img/' + self.dealer.card_img[0] + '.png').convert()
+        # dealer_card_2 = pygame.image.load('img/back.png').convert()
             
-        player_card = pygame.image.load('img/' + self.player.card_img[0] + '.png').convert()
-        player_card_2 = pygame.image.load('img/' + self.player.card_img[1] + '.png').convert()
+        # player_card = pygame.image.load('img/' + self.player.card_img[0] + '.png').convert()
+        # player_card_2 = pygame.image.load('img/' + self.player.card_img[1] + '.png').convert()
 
+        game_texts("Dealer's hand is:", display_width/2, 50)
+        self.draw_cards(self.dealer.card_img, 0)
+
+        # gameDisplay.blit(dealer_card, (400, 200))
+        # gameDisplay.blit(dealer_card_2, (550, 200))
+
+        game_texts("Your's hand is:", display_width/2, 400)
         
-        game_texts("Dealer's hand is:", 500, 150)
-
-        gameDisplay.blit(dealer_card, (400, 200))
-        gameDisplay.blit(dealer_card_2, (550, 200))
-
-        game_texts("Your's hand is:", 500, 400)
-        
-        gameDisplay.blit(player_card, (300, 450))
-        gameDisplay.blit(player_card_2, (410, 450))
+        self.draw_cards(self.player.card_img, 1)
+        # gameDisplay.blit(player_card, (300, 450))
+        # gameDisplay.blit(player_card_2, (410, 450))
         self.blackjack()
+        
+        
             
-            
-
+    
     def hit(self):
         self.player.add_card(self.deck.deal())
         self.blackjack()
         self.player_card += 1
-        
-        if self.player_card == 2:
-            self.player.calc_hand()
-            self.player.display_cards()
-            player_card_3 = pygame.image.load('img/' + self.player.card_img[2] + '.png').convert()
-            gameDisplay.blit(player_card_3, (520, 450))
-
-        if self.player_card == 3:
-            self.player.calc_hand()
-            self.player.display_cards()
-            player_card_4 = pygame.image.load('img/' + self.player.card_img[3] + '.png').convert()
-            gameDisplay.blit(player_card_4, (630, 450))
                 
         if self.player.value > 21:
-            show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
-            gameDisplay.blit(show_dealer_card, (550, 200))
+            # show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
+            self.draw_cards(self.dealer.card_img, 0, True)
+            # gameDisplay.blit(show_dealer_card, (550, 200))
             game_finish("You Busted!", 500, 250, red)
             time.sleep(4)
             self.play_or_exit()
+        else:
+            self.player.calc_hand()
+            self.player.display_cards()
+            # player_card_3 = pygame.image.load('img/' + self.player.card_img[2] + '.png').convert()
+            # gameDisplay.blit(player_card_3, (520, 450))
+            self.draw_cards(self.player.card_img, 1)
             
         self.player.value = 0
-
-        if self.player_card > 4:
-            sys.exit()
             
             
     def stand(self):
         # print("standing")
         # print(self.dealer.card_img)
         # print()
-        show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
-        gameDisplay.blit(show_dealer_card, (550, 200))
+        # show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
+        # gameDisplay.blit(show_dealer_card, (550, 200))
+        self.draw_cards(self.dealer.card_img, 0, True)
         self.blackjack()
         self.dealer.calc_hand()
         self.player.calc_hand()
@@ -269,7 +296,7 @@ class Play:
         self.player = Hand()
         self.deck.shuffle()
         gameDisplay.fill(background_color)
-        pygame.draw.rect(gameDisplay, grey, pygame.Rect(0, 0, 250, 700))
+        # pygame.draw.rect(gameDisplay, grey, pygame.Rect(0, 0, 250, 700))
         pygame.display.update()
     
     
@@ -284,10 +311,10 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-        button("Deal", 30, 100, 150, 50, light_slat, dark_slat, play_blackjack.deal)
-        button("Hit", 30, 200, 150, 50, light_slat, dark_slat, play_blackjack.hit)
-        button("Stand", 30, 300, 150, 50, light_slat, dark_slat, play_blackjack.stand)
-        button("EXIT", 30, 500, 150, 50, light_slat, dark_red, play_blackjack.exit)
+        button("Deal", 770, 600, 120, 40, light_slat, dark_slat, play_blackjack.deal)
+        # button("Hit", 30, 200, 150, 50, light_slat, dark_slat, play_blackjack.hit)
+        # button("Stand", 30, 300, 150, 50, light_slat, dark_slat, play_blackjack.stand)
+        button("EXIT", 770, 650, 120, 40, light_slat, dark_red, play_blackjack.exit)
 
         if params.action_type == 'fixed_policy':
            
