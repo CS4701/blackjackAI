@@ -10,8 +10,8 @@ pygame.init()
 clock = pygame.time.Clock()
 
 gameDisplay = pygame.display.set_mode((display_width, display_height))
-CARD_WIDTH = pygame.image.load('img/2C.png').convert().get_width()  
-CARD_HEIGHT = pygame.image.load('img/2C.png').convert().get_height()  
+CARD_WIDTH = pygame.image.load('img/2C.png').convert().get_width()*2/3  
+CARD_HEIGHT = pygame.image.load('img/2C.png').convert().get_height()*2/3  
 CARD_SPACING = 20 
 pygame.display.set_caption('BlackJack')
 gameDisplay.fill(background_color)
@@ -112,17 +112,26 @@ class Play:
             if player == 0:
                 start_y = 80
             else:
-                start_y = display_height/2
+                start_y = 500
             self.clear_card_areas(start_x, start_y, total_width)
 
 
-
-
-            for i in range(len(card_images)):
-                if i == 1 and player == 0 and show_dealer == False:
-                    continue
-                card_image = pygame.image.load('img/' + card_images[i] + '.png').convert()
+            if player == 0 and show_dealer == False:
+                for i in range(len(card_images)):
+                        card_image = pygame.image.load('img/' + card_images[i] + '.png').convert()
+                        card_image = pygame.transform.scale(card_image, (CARD_WIDTH, CARD_HEIGHT))
+                        gameDisplay.blit(card_image, (start_x + i * (CARD_WIDTH + CARD_SPACING), start_y))
+                card_image = pygame.image.load('img/back.png').convert()
+                card_image = pygame.transform.scale(card_image, (CARD_WIDTH, CARD_HEIGHT))
                 gameDisplay.blit(card_image, (start_x + i * (CARD_WIDTH + CARD_SPACING), start_y))
+            else:
+                for i in range(len(card_images)):
+                        card_image = pygame.image.load('img/' + card_images[i] + '.png').convert()
+                        card_image = pygame.transform.scale(card_image, (CARD_WIDTH, CARD_HEIGHT))
+                        gameDisplay.blit(card_image, (start_x + i * (CARD_WIDTH + CARD_SPACING), start_y))
+
+
+
 
             pygame.display.update()
 
@@ -195,10 +204,10 @@ class Play:
 
         time.sleep(2)
         if action: # hit: add a card to players hand and return
-            game_texts('AI Hitting', 500,650, True)
+            game_texts('AI Hitting', display_width/2,650, True)
             self.hit()
         else: # stick: play out the dealers hand, and score
-            game_texts('AI standing', 500,650, True)
+            game_texts('AI standing', display_width/2,650, True)
 
             self.stand()
 
@@ -221,13 +230,13 @@ class Play:
         # player_card = pygame.image.load('img/' + self.player.card_img[0] + '.png').convert()
         # player_card_2 = pygame.image.load('img/' + self.player.card_img[1] + '.png').convert()
 
-        game_texts("Dealer's hand is:", display_width/2, 50)
+        game_texts("Dealer's hand is:", display_width/2, 55)
         self.draw_cards(self.dealer.card_img, 0)
 
         # gameDisplay.blit(dealer_card, (400, 200))
         # gameDisplay.blit(dealer_card_2, (550, 200))
 
-        game_texts("Your's hand is:", display_width/2, 400)
+        game_texts("Your's hand is:", display_width/2, 475)
         
         self.draw_cards(self.player.card_img, 1)
         # gameDisplay.blit(player_card, (300, 450))
@@ -246,7 +255,7 @@ class Play:
             # show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
             self.draw_cards(self.dealer.card_img, 0, True)
             # gameDisplay.blit(show_dealer_card, (550, 200))
-            game_finish("You Busted!", 500, 250, red)
+            game_finish("You Busted!", display_width/2, 250, red)
             time.sleep(4)
             self.play_or_exit()
         else:
@@ -270,15 +279,15 @@ class Play:
         self.dealer.calc_hand()
         self.player.calc_hand()
         if self.player.value > self.dealer.value:
-            game_finish("You Won!", 500, 250, green)
+            game_finish("You Won!", display_width/2, display_height/2, green)
             time.sleep(4)
             self.play_or_exit()
         elif self.player.value < self.dealer.value:
-            game_finish("Dealer Wins!", 500, 250, red)
+            game_finish("Dealer Wins!", display_width/2, display_height/2, red)
             time.sleep(4)
             self.play_or_exit()
         else:
-            game_finish("It's a Tie!", 500, 250, grey)
+            game_finish("It's a Tie!", display_width/2, display_height/2, grey)
             time.sleep(4)
             self.play_or_exit()
         
@@ -287,7 +296,7 @@ class Play:
         sys.exit()
     
     def play_or_exit(self):
-        game_texts("Play again press Deal!", 200, 80)
+        game_texts("Play again press Deal!", display_width/2, 650)
         time.sleep(3)
         self.player.value = 0
         self.dealer.value = 0
