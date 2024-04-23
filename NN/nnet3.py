@@ -9,6 +9,7 @@ import keras
 # helper libs
 import numpy as np
 import matplotlib.pyplot as plt
+import blackjack as bj
 
 # introduction
 print( "TensorFlow Version: " + tf.__version__ )
@@ -78,7 +79,7 @@ test_data = np.array(test_data, dtype=float)
 
 test_loss, test_acc = model.evaluate(test_data, test_tags)
 
-# print('Test accuracy:', test_acc)
+print('Test accuracy:', test_acc)
 
 
 # save model
@@ -89,6 +90,20 @@ with open( "models/blackjackmodel.3.json", "w") as json_file:
 # serialize weights to HDF5
 model.save_weights("models/blackjackmodel.3.h5")
 print( "Model saved" )
+
+
+
+wins, losses, ties = bj.test_model( "blackjackmodel.3", 100, True, 3, False )
+total = wins + losses + ties
+win_percentage = (wins/total)*100.0
+loss_percentage = (losses/total)*100.0
+tie_percentage = (ties/total)*100.0
+print( "Percentage won:  " + str( win_percentage ) )
+print( "Percentage lost: " + str( loss_percentage ) )
+print( "Percentage tied: " + str( tie_percentage ) )
+
+
+
 
 
 # open serialized model
@@ -102,12 +117,19 @@ print( "Model loaded from disk" )
 
 print( "testing model" )
 
-for i in range(21):
-	prediction = model.predict( np.array([ [i,10] ]) )
-	if prediction[0][0] > prediction[0][1]:
-		print( str(i) + " stay" )
-	else:
-		print( str(i) + " hit" )
+
+
+output_file = 'model_predictions2.txt'
+with open(output_file, 'w' ) as file:
+	for i in range(21):
+		prediction = model.predict( np.array([ [i,10] ]) , verbose = 0)
+		action = "stay" if prediction[0][0] > prediction[0][1] else "hit"
+		print(f"{i} {action}", file=file)
+	# if prediction[0][0] > prediction[0][1]:
+	# 	print( str(i) + " stay" )
+	# else:
+	# 	print( str(i) + " hit" )
+
 
 
 results = []
@@ -122,22 +144,68 @@ for i in range(0,17):
 			results[i] = results[i] + "h"
 
 print( "  ", end="" )
+with open('policy2.txt', 'w') as file:
+    # Header for column numbers
+    print("  ", end="", file=file)
+    for x in range(len(results[0])):
+        print(" " + str((x + 4) % 10), end="", file=file)
+    print(file=file)
+    
+    # Rows with results
+    for i in range(len(results)):
+        print(i + 5, end="", file=file)
+        if i + 5 < 10:
+            print("  ", end="", file=file)
+        else:
+            print(" ", end="", file=file)
+        for j in range(len(results[i])):
+            print(results[i][j], end=" ", file=file)
+        print(file=file)
 
-for x in range( len(results[0]) ):
-	print( " " + str( (x+4)%10 ), end="" )
-print( )
-for i in range( len(results) ):
-	print( i+5, end="" )
-	if i+5 < 10:
-		print( "  ", end="" )
-	else:
-		print( " ", end="" )
-	for j in range( len(results[i] ) ):
-		print( results[i][j], end=" " )
-	print( )
+# for x in range( len(results[0]) ):
+# 	print( " " + str( (x+4)%10 ), end="")
+# print( )
+# for i in range( len(results) ):
+# 	print( i+5, end="" )
+# 	if i+5 < 10:
+# 		print( "  ", end="" )
+# 	else:
+# 		print( " ", end="" )
+# 	for j in range( len(results[i] ) ):
+# 		print( results[i][j], end=" ")
+# 	print( )
+
+# output_file = 'model_predictions_state_2.txt'
+
+# with open(output_file, 'w') as file:
+# 	print('testing_model')
+# 	results = []
+
+# 	for i in range(0,17):
+# 		results = results + [ "" ]
+# 		for j in range(0,9):
+# 			prediction = model.predict( np.array([ [i+5,j+2] ] ) )
+# 			if prediction[0][0] > prediction[0][1]:
+# 				results[i] = results[i] + "s"
+# 			else:
+# 				results[i] = results[i] + "h"
+
+# 	print( "  ", end="" )
+
+# 	for x in range( len(results[0]) ):
+# 		print( " " + str( (x+4)%10 ), end="" , file = file)
+# 	print( )
+# 	for i in range( len(results) ):
+# 		print( i+5, end="" , file = file)
+# 		if i+5 < 10:
+# 			print( "  ", end="" , file = file)
+# 		else:
+# 			print( " ", end="" , file = file)
+# 		for j in range( len(results[i] ) ):
+# 			print( results[i][j], end=" " , file = file)
+# 		print( )
 
 
 # test_loss, test_acc = model.evaluate(test_data, test_tags)
 
-print('Test accuracy:', test_acc)
 
