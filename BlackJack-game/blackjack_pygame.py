@@ -24,6 +24,7 @@ def text_objects(text, font):
     return textSurface, textSurface.get_rect()
 
 def end_text_objects(text, font, color):
+    font = pygame.font.Font(None, 32)
     textSurface = font.render(text, True, color)
     return textSurface, textSurface.get_rect()
 
@@ -93,7 +94,8 @@ class Play:
     def __init__(self, params = None):
         self.deck = Deck()
         self.dealer = Hand()
-        self.player = Hand()
+        # self.player = Hand()
+        self.players = [Hand() for _ in range(3)]
         self.deck.shuffle()
         if params:
             self.action_type = params.action_type
@@ -107,13 +109,24 @@ class Play:
 
     def draw_cards(self, card_images, player, show_dealer=False):
             num_cards = len(card_images)
+            start_x = 0
+            start_y = 0
             total_width = num_cards * CARD_WIDTH + (num_cards - 1) * CARD_SPACING
-            start_x = (display_width - total_width) / 2  # Start so that cards are centered
-            if player == 0:
-                start_y = 80
-            else:
-                start_y = 500
-            self.clear_card_areas(start_x, start_y, total_width)
+            if player == 0 or player == 2:
+                start_x = (display_width - total_width) / 2  # Start so that cards are centered
+                if player == 0:
+                    start_y = 80
+
+                else:
+                    start_y = 500
+
+                self.clear_card_areas(start_x, start_y, total_width)
+            elif player == 1 or player == 3:
+                start_y = (display_height)/2
+                if player == 1:
+                    start_x = (100 + total_width)/2
+                if player == 3:
+                    start_x = (700 + total_width)/2
 
 
             if player == 0 and show_dealer == False:
@@ -145,19 +158,19 @@ class Play:
         if self.player.value == 21 and self.dealer.value == 21:
             # gameDisplay.blit(show_dealer_card, (550, 200))
             self.draw_cards(self.dealer.card_img, 0, True)
-            black_jack("Both with BlackJack!", 500, 250, grey)
+            black_jack("Both with BlackJack!", display_width/2, 250, grey)
             time.sleep(4)
             self.play_or_exit()
         elif self.player.value == 21:
             # gameDisplay.blit(show_dealer_card, (550, 200))
             self.draw_cards(self.dealer.card_img, 0, True)
-            black_jack("You got BlackJack!", 500, 250, green)
+            black_jack("You got BlackJack!", display_width/2, 250, green)
             time.sleep(4)
             self.play_or_exit()
         elif self.dealer.value == 21:
             # gameDisplay.blit(show_dealer_card, (550, 200))
             self.draw_cards(self.dealer.card_img, 0, True)
-            black_jack("Dealer has BlackJack!", 500, 250, red)
+            black_jack("Dealer has BlackJack!", display_width/2, 250, red)
             time.sleep(4)
             self.play_or_exit()
             
@@ -238,7 +251,7 @@ class Play:
 
         game_texts("Your's hand is:", display_width/2, 475)
         
-        self.draw_cards(self.player.card_img, 1)
+        self.draw_cards(self.player.card_img, 2)
         # gameDisplay.blit(player_card, (300, 450))
         # gameDisplay.blit(player_card_2, (410, 450))
         self.blackjack()
@@ -263,7 +276,7 @@ class Play:
             self.player.display_cards()
             # player_card_3 = pygame.image.load('img/' + self.player.card_img[2] + '.png').convert()
             # gameDisplay.blit(player_card_3, (520, 450))
-            self.draw_cards(self.player.card_img, 1)
+            self.draw_cards(self.player.card_img, 2)
             
         self.player.value = 0
             
