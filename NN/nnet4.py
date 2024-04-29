@@ -9,7 +9,7 @@ import keras
 # helper libs
 import numpy as np
 import matplotlib.pyplot as plt
-import Blackjack as bj
+import blackjack as bj
 
 # introduction
 print( "TensorFlow Version: " + tf.__version__ )
