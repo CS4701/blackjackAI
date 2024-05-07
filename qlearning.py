@@ -8,9 +8,9 @@ class const():
   '''
   def __init__(self):
     self.gamma = 0.5
-    self.input_filename = 'random_policy_runs_mapping_2.csv'
-    self.output_filename = 'QLearning_policy_mapping_2.policy'
-    self.n_states = 183 # 21 for state mapping 1, 183 for state mapping 2
+    self.input_filename = 'random_policy_runs_mapping_1.csv'
+    self.output_filename = 'QLearning_policy_mapping_1.policy'
+    self.n_states = 21 # 21 for state mapping 1, 183 for state mapping 2
     self.n_action = 2
     self.alpha = 0.01
     self.lambda_ = 0.1

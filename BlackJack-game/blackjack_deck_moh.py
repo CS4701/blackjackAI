@@ -69,6 +69,23 @@ class Hand(Deck):
                 self.value += 1
     
     def get_dealer_card(self):
+        # first_card_index = [a_card[0] for a_card in self.cards]
+        # non_aces = [c for c in first_card_index if c != 'A']
+        # aces = [c for c in first_card_index if c == 'A']
+        # value = 0
+        # for card in non_aces:
+        #     if card in 'JQK':
+        #         value += 10
+        #     else:
+        #         value += int(card)
+
+        # for card in aces:
+        #     if value <= 10:
+        #         value += 11
+        #     else:
+        #         value += 1
+        # return value
+
         first_card = self.cards[0]
         value = first_card[0]
         if value in 'JQK':

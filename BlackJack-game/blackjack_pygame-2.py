@@ -33,7 +33,7 @@ print( "Model loaded from disk" )
 NN_YES = True
 ai1_policy = None
 ai2_policy = None
-ai1_statemapping = 2
+ai1_statemapping = 1
 ai2_statemapping = 2
 pygame.init()
 
@@ -275,10 +275,18 @@ class Play:
 
 
 
-        if len(winners) > 1:
+        if len(winners) > 1 and self.dealer in winners:
             names_with_blackjack = " and ".join([winner.name for winner in winners])
             print(names_with_blackjack, "with BlackJack!")
             black_jack(f"It's a Tie! {names_with_blackjack} with BlackJack!", display_width/2, 250, grey)
+        elif len(winners) > 1:
+            winner_names = " and ".join([winner.name for winner in winners])
+
+            for w in winners:
+                w.wins +=1
+                print(f'{w.name} got BlackJack!')
+            black_jack( f'{winner_names} got BlackJack!', display_width/2, 250, green)
+                
         else:
             winner = winners[0]
             winner.wins += 1
@@ -311,21 +319,26 @@ class Play:
         #     raise ValueError("Policy file path not set for the player.")
     
     def hand_to_state(self, player):
-        for player in self.players:
-            player.value = 0
+        # print(player.state_mapping)
+        for p in self.players:
+            p.value = 0
 
-        for player in self.players:
-            player.calc_hand()
+        for p in self.players:
+            p.calc_hand()
+        
+        # print(player.state_mapping)
 
-        # if player.state_mapping == 1:
-        #  return self.sum_hand(player_hand) - 1
-        if player.state_mapping == 2:
-            return (self.player2.value- 1) + (18 * (self.dealer.get_dealer_card() - 1))
+        if player.state_mapping == 1:
+            # print(f'state_mapping_1 {player.value}')
+            return player.value - 1
+        elif player.state_mapping == 2:
+            # print(f'state_mapping_2 {player.value}')
+            return (player.value- 1) + (18 * (self.dealer.get_dealer_card() - 1))
         elif player.state_mapping == 3:
             if self.player.usable_ace() and len(self.player.cards) <= 2:
-                return 181 + (self.player.value - 11) + (9 * (self.dealer.get_dealer_card() - 1))
+                return 181 + (player.value - 11) + (9 * (self.dealer.get_dealer_card() - 1))
             else:
-                return (self.player.value - 1) + (18 * (self.dealer.get_dealer_card() - 1))
+                return (player.value - 1) + (18 * (self.dealer.get_dealer_card() - 1))
     
     
     def policy_run(self, player):
@@ -333,8 +346,10 @@ class Play:
            return
         if player.NN == False:
             if (player is self.player2) or (player is self.player3):
-                print(player.name)
+                # print(player.name)
+                # print(player.state_mapping)
                 state = self.hand_to_state(player)
+                # print(f"state: {state}")
                 action = player.policy[state]
 
                 if action: # hit: add a card to players hand and return
@@ -560,6 +575,13 @@ class Play:
             print(f'{winner.name} Won!')
             winner.wins += 1
             game_finish(f'{winner.name} Wins!', 500, 250, green)
+        elif self.dealer not in winners:
+            winner_names = " and ".join([winner.name for winner in winners])
+            game_finish(f'{winner_names} Win!', 500, 250, green)
+
+            for w in winners:
+                w.wins+=1
+            
         else:
             winner_names = " and ".join([winner.name for winner in winners])
             print(f'It\'s a Tie! {winner_names} Won!')
@@ -605,8 +627,9 @@ class Play:
 
 def game():
     global ai1_policy, ai2_policy, ai1_statemapping, ai2_statemapping
+    print(f"{ai1_statemapping}    {ai2_statemapping}")
     if ai1_policy is None and ai2_policy is None:
-        ai1_policy = 'QLearning_policy_mapping_2.policy'
+        ai1_policy = 'QLearning_policy_mapping_1.policy'
         ai2_policy = "QLearning_policy_mapping_2.policy"
 
 
@@ -639,6 +662,9 @@ def game():
 
 
             if play_blackjack.turn == 2:
+                print(play_blackjack.player2.state_mapping)
+
+                print(play_blackjack.player3.state_mapping)
                 play_blackjack.policy_run(play_blackjack.player2)
                 print('player 1')
                 time.sleep(1)
@@ -662,6 +688,10 @@ def option_text(text, x, y, color, select_panel= False):
     pygame.display.update()
     Y = TextRect.y
     if select_panel:
+
+        TextRect.y = Y + 300
+        pygame.draw.rect(gameDisplay, background_color , TextRect)
+
         TextRect.y = Y + 200
         pygame.draw.rect(gameDisplay, background_color , TextRect)
 
@@ -674,6 +704,9 @@ def option_text(text, x, y, color, select_panel= False):
         TextRect.y = Y - 200
         pygame.draw.rect(gameDisplay,background_color , TextRect)
 
+        TextRect.y = Y - 300
+        pygame.draw.rect(gameDisplay, background_color , TextRect)
+
 
 
 def set_policy(ai, policy_name, statemapping = None ):
@@ -681,9 +714,12 @@ def set_policy(ai, policy_name, statemapping = None ):
     if ai == 'AI1':
         ai1_policy = policy_name
         ai1_statemapping = statemapping
+        print(f"state mapping for AI 1: {statemapping}")
     elif ai == 'AI2':
         ai2_policy = policy_name
         ai2_statemapping = statemapping
+        print(f"state mapping for AI 2: {statemapping}")
+
     gameDisplay.fill(background_color, rect=[225, 200, 500, 50])
     pygame.display.update()
     print(f"{ai} policy set to {policy_name}")
@@ -699,20 +735,29 @@ def show_policy_selection_screen():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-        button("Q Learning", 100, 200, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", 'QLearning_policy_mapping_2.policy', 2])
+        button("Q Learning", 100, 200, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", 'QLearning_policy_mapping_1.policy', 1])
         button("Q Learning", 700, 200, 100, 40, light_slat, dark_slat, set_policy, True, ["AI2", 'QLearning_policy_mapping_2.policy', 2])
+
         button("NN", 100, 300, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", "NN"]) # not sure where to get NN's policy
         button("NN", 700, 300, 100, 40, light_slat, dark_slat, set_policy, True, ["AI2", "NN"])
-        button("Value Iteration", 100, 400, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", 'Value_Iteration_Policy_2.policy', 2])
+
+        button("Value Iteration", 100, 400, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", 'Value_Iteration_Policy_1.policy', 1])
         button("Value Iteration", 700, 400, 100, 40, light_slat, dark_slat, set_policy, True, ["AI2", 'Value_Iteration_Policy_2.policy', 2])
 
+        button("SARSA", 100, 500, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", 'Sarsa_Policy_1.policy', 1])
+        button("SARSA", 700, 500, 100, 40, light_slat, dark_slat, set_policy, True, ["AI2", 'Sarsa_Policy_2.policy', 2])
+
         button("Back", 770, 650, 120, 40, light_slat, dark_slat, game, True)
-        if ai1_policy == 'QLearning_policy_mapping_2.policy':
+
+        if ai1_policy == 'QLearning_policy_mapping_1.policy':
             option_text('Selected', 325, 225, black, select_panel=True)
         elif ai1_policy == 'NN':
             option_text('Selected', 325, 325, black, select_panel= True)
-        elif ai1_policy == 'Value_Iteration_Policy_2.policy':
+        elif ai1_policy == 'Value_Iteration_Policy_1.policy':
             option_text('Selected', 325, 425, black, select_panel= True)
+        elif ai1_policy == 'Sarsa_Policy_1.policy':
+            option_text('Selected', 325, 525, black, select_panel= True)
+
 
 
         if ai2_policy == 'QLearning_policy_mapping_2.policy':
@@ -721,6 +766,9 @@ def show_policy_selection_screen():
             option_text('Selected', 575, 325, black, select_panel= True)
         elif ai2_policy == 'Value_Iteration_Policy_2.policy':
             option_text('Selected', 575, 425, black, select_panel= True)
+        elif ai2_policy == 'Sarsa_Policy_2.policy':
+            option_text('Selected', 575, 525, black, select_panel= True)
+
 
         pygame.display.flip()
 

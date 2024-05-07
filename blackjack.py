@@ -10,10 +10,12 @@ class Params():
   # Only used for 'random_policy' or 'fixed_policy' input
     self.num_games = 20000
   # Filepath to fixed policy file (only used for 'fixed_policy' input)
-    self.fixed_policy_filepath = os.path.join(os.getcwd(), 'math_policy.policy')
-    # self.fixed_policy_filepath = os.path.join(os.getcwd(), 'QLearning_policy_mapping_2.policy') 
+    # self.fixed_policy_filepath = os.path.join(os.getcwd(), 'Sarsa_policy_2.policy')
+    self.fixed_policy_filepath = os.path.join(os.getcwd(), 'QLearning_policy_mapping_1.policy') 
+    # self.fixed_policy_filepath = os.path.join(os.getcwd(), 'math_policy.policy')
+
   # Which state mapping algorithm to use (1 or 2)
-    self.state_mapping = 3
+    self.state_mapping = 1
     return
 
 """
