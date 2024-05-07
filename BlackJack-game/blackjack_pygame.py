@@ -4,8 +4,39 @@ from constants import *
 import sys
 import time
 import os
-pygame.init()
 
+# tf and keras
+import tensorflow as tf
+#from tensorflow import keras
+# import keras.models
+# from keras import models
+# import keras
+# from keras.models import model_from_json
+# from tensorflow.keras.models import Sequential
+# from tensorflow.keras.initializers import glorot_uniform
+
+# helper libs
+import matplotlib.pyplot as plt
+from itertools import product, combinations
+import pickle
+import numpy as np
+import random
+
+# #Load Card Counting NN model
+# json_file = open('../NN/models/blackjackmodel.3.json', 'r')
+# loaded_model_json = json_file.read()
+# json_file.close()
+# model = model_from_json( loaded_model_json, custom_objects={"GlorotUniform": tf.keras.initializers.glorot_uniform} )
+# model.load_weights( "../NN/models/blackjackmodel.3.h5" )
+# print( "Model loaded from disk" )
+
+NN_YES = True
+ai1_policy = None
+ai2_policy = None
+ai1_statemapping = 2
+ai2_statemapping = 2
+game_winners = [0, 0, 0, 0]
+pygame.init()
 
 clock = pygame.time.Clock()
 
@@ -43,8 +74,6 @@ def game_texts(text, x, y, ai=False):
         pygame.draw.rect(gameDisplay,background_color , TextRect)  # Draw a black rectangle over the text
         pygame.display.update()
 
-
- 
 def game_finish(text, x, y, color):
     TextSurf, TextRect = end_text_objects(text, game_end, color)
     TextRect.center = (x, y)
@@ -58,13 +87,16 @@ def black_jack(text, x, y, color):
     pygame.display.update()
     
 #button display
-def button(msg, x, y, w, h, ic, ac, action=None):
+def button(msg, x, y, w, h, ic, ac, action=None, active=True, params = None):
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
     if x + w > mouse[0] > x and y + h > mouse[1] > y:
-        pygame.draw.rect(gameDisplay, ac, (x, y, w, h))
-        if click[0] == 1 != None:
-            action()
+        pygame.draw.rect(gameDisplay, ac if active else ic, (x, y, w, h))
+        if click[0] == 1 and action and active:
+            if params is not None:
+                action(*params)
+            else:
+                action()
     else:
         pygame.draw.rect(gameDisplay, ic, (x, y, w, h))
 
@@ -72,36 +104,102 @@ def button(msg, x, y, w, h, ic, ac, action=None):
     TextRect.center = ((x + (w/2)), (y + (h/2)))
     gameDisplay.blit(TextSurf, TextRect)
 
-class Params():
-  def __init__(self):
-  # 'input', 'random_policy', 'fixed_policy'
-    self.action_type = 'fixed_policy'
-  # Only used for 'random_policy' or 'fixed_policy' input
-    self.num_games = 20000
-    # Get the parent directory of the current working directory
-    parent_directory = os.path.dirname(os.getcwd())
+def card_to_index(card_value, suit):
+    #SUITS order: S, H, C, D
+    if card_value in 'J':
+        card_value = 11
+    elif (card_value == 'A'):
+        card_value = 1
+    elif card_value == 'Q':
+        card_value = 12
+    elif card_value == 'K':
+        card_value = 13
+    else:
+        card_value = int(card_value)
 
-    # Combine parent directory with the relative path to the policy file
-    policy_file_path = os.path.join(parent_directory, 'QLearning_policy_mapping_2.policy')
-  # Filepath to fixed policy file (only used for 'fixed_policy' input)
-    self.fixed_policy_filepath = policy_file_path
-    # self.fixed_policy_filepath = os.path.join(os.getcwd(), 'QLearning_policy_mapping_2.policy') 
-  # Which state mapping algorithm to use (1 or 2)
-    self.state_mapping = 2
-    return
+    if suit == 'S':
+        suit = 4
+    elif (suit == 'H'):
+        suit = 3
+    elif (suit == 'C'):
+        suit = 2
+    else:
+        suit = 1
+
+    index = (card_value - 1) * 4 + suit -1
+    return index + 2
+
+ 
+    
+    
+
+class Params():
+    def __init__(self, action_type = "random_policy", filename =  None, state_mapping = 1):
+    # 'input', 'random_policy', 'fixed_policy'
+        self.action_type = action_type
+    # Only used for 'random_policy' or 'fixed_policy' input
+        self.num_games = 20000
+
+        if not filename:
+            return
+        # Get the parent directory of the current working directory
+        parent_directory = os.path.dirname(os.getcwd())
+
+        # Combine parent directory with the relative path to the policy file
+        policy_file_path = os.path.join(parent_directory, filename)
+    # Filepath to fixed policy file (only used for 'fixed_policy' input)
+        self.fixed_policy_filepath = policy_file_path
+        # self.fixed_policy_filepath = os.path.join(os.getcwd(), 'QLearning_policy_mapping_2.policy') 
+    # Which state mapping algorithm to use (1 or 2)
+        self.state_mapping = state_mapping
+        return
   
 class Play:
     def __init__(self, params = None):
+        self.game_active = False
         self.deck = Deck()
-        self.dealer = Hand()
-        # self.player = Hand()
-        self.players = [Hand() for _ in range(3)]
+        self.dealer = Hand("Dealer")
+        self.player1 = Hand()
+        self.players = [self.dealer, self.player1]
+      
+
+        self.turn = 1
         self.deck.shuffle()
+        self.params = params
+
+
+
+
+        self.NN_YES = NN_YES
+        self.AI_1_HAND = [0]*54 #for Card Counting NN input
+        self.AI_2_HAND = [0]*54
+        self.AI_3_HAND = [0]*54
+        self.NUM_ROUNDS = 1
+
+
+        if self.NN_YES:
+            self.player4 = Hand("AI 3", params = None)
+            self.players.append(self.player4)
+
         if params:
-            self.action_type = params.action_type
-            self.fixed_policy_filepath = params.fixed_policy_filepath
-            self.policy = self.load_policy()
-            self.state_mapping = params.state_mapping
+            for i, param in enumerate(params):
+                if param.fixed_policy_filepath:
+                    if i == 0:
+                        self.player2 = Hand("AI 1", params=param)
+
+                        self.player2.policy = self.load_policy(self.player2)
+                        self.players.append(self.player2)
+                        
+                
+
+                    elif i == 1:
+                        self.player3 = Hand("AI 2", params=param)
+
+                        self.player3.policy = self.load_policy(self.player3)
+                        self.players.append(self.player3)
+                else:
+                    print("No file path")
+
 
     def clear_card_areas(self, start_x, start_y, width):
         gameDisplay.fill(background_color, rect=[start_x, start_y, width, CARD_HEIGHT])
@@ -124,9 +222,10 @@ class Play:
             elif player == 1 or player == 3:
                 start_y = (display_height)/2
                 if player == 1:
-                    start_x = (100 + total_width)/2
+                    start_x = display_width/4 - total_width/2
                 if player == 3:
-                    start_x = (700 + total_width)/2
+                    start_x = 3 * display_width/4 - total_width/2
+                self.clear_card_areas(start_x, start_y, total_width)
 
 
             if player == 0 and show_dealer == False:
@@ -142,180 +241,388 @@ class Play:
                         card_image = pygame.image.load('img/' + card_images[i] + '.png').convert()
                         card_image = pygame.transform.scale(card_image, (CARD_WIDTH, CARD_HEIGHT))
                         gameDisplay.blit(card_image, (start_x + i * (CARD_WIDTH + CARD_SPACING), start_y))
-
-
-
-
             pygame.display.update()
 
-    def blackjack(self):
-
-        self.dealer.calc_hand()
-        self.player.calc_hand()
-
-        show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
         
-        if self.player.value == 21 and self.dealer.value == 21:
-            # gameDisplay.blit(show_dealer_card, (550, 200))
-            self.draw_cards(self.dealer.card_img, 0, True)
-            black_jack("Both with BlackJack!", display_width/2, 250, grey)
-            time.sleep(4)
-            self.play_or_exit()
-        elif self.player.value == 21:
-            # gameDisplay.blit(show_dealer_card, (550, 200))
-            self.draw_cards(self.dealer.card_img, 0, True)
-            black_jack("You got BlackJack!", display_width/2, 250, green)
-            time.sleep(4)
-            self.play_or_exit()
-        elif self.dealer.value == 21:
-            # gameDisplay.blit(show_dealer_card, (550, 200))
-            self.draw_cards(self.dealer.card_img, 0, True)
-            black_jack("Dealer has BlackJack!", display_width/2, 250, red)
-            time.sleep(4)
-            self.play_or_exit()
-            
-        self.player.value = 0
-        self.dealer.value = 0
-    
+
+    def blackjack(self): #determine winners
+        # self.dealer.value = 0
+        # self.dealer.calc_hand()
+        global game_winners
+        for player in self.players:
+            player.value = 0
+
+        winners = []
+        for player in self.players: #dealer and user
+            player.calc_hand()
+            if player.value == 21:
+                winners.append(player)
+
+        if len(winners) == 0:
+            return
+        
+        self.dealer.display_cards()
+        # show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
+        # gameDisplay.blit(show_dealer_card, (550, 200))
+        self.draw_cards(self.dealer.card_img, 0, True)
+
+
+
+        if len(winners) > 1:
+            names_with_blackjack = " and ".join([winner.name for winner in winners])
+            print(names_with_blackjack, "with BlackJack!")
+            black_jack(f"It's a Tie! {names_with_blackjack} with BlackJack!", display_width/2, 250, grey)
+            for winner in winners:
+                if winner == self.dealer:
+                    game_winners[0] += 1
+                elif winner == self.player1:
+                    game_winners[1] += 1
+                elif winner == self.player2:
+                    game_winners[2] += 1
+                elif winner == self.player3:
+                    game_winners[3] += 1
+                else:
+                    print("no such player")
+        else:
+            winner = winners[0]
+            winner.wins += 1
+            if winner == self.dealer:
+                game_winners[0] += 1
+            elif winner == self.player1:
+                game_winners[1] += 1
+            elif winner == self.player2:
+                game_winners[2] += 1
+            elif winner == self.player3:
+                game_winners[3] += 1
+            else:
+                print("no such player")
+            print(f'{winner.name} got BlackJack!')
+            black_jack( f'{winner.name} got BlackJack!', display_width/2, 250, green)
+        
+        time.sleep(4)
+        self.play_or_exit()  
+        
+
     # Load policy from input .policy file into self.policy
-    def load_policy(self):
-    # Policy not needed if a user is playing or a random policy is being used
-        if self.action_type in ['random_policy', 'input']:
+    def load_policy(self, player):
+        # Policy not needed if a user is playing or a random policy is being used
+        if player.action_type in ['random_policy', 'input']:
             return None
-    # Read policy file and extract policy
-        f = open(self.fixed_policy_filepath, 'r')
+        # Read policy file and extract policy
+        f = open(player.fixed_policy_filepath, 'r')
         data = f.read()
         data = data.split()
         policy = [int(x) for x in data]
         return policy
     
-    def hand_to_state(self):
-        self.dealer.calc_hand()
-        self.player.calc_hand()
+        # testing if policy failed v
+        # if hasattr(player, 'fixed_policy_filepath') and player.fixed_policy_filepath:
+        #     with open(player.fixed_policy_filepath, 'r') as f:
+        #         policy_data = f.read()
+        #     # Load the policy from the data here
+        #     return policy_data
+        # else:
+        #     raise ValueError("Policy file path not set for the player.")
+    
+    def hand_to_state(self, player):
+        for player in self.players:
+            if player is not self.player4:
+                player.value = 0
 
-        # if self.state_mapping == 1:
+        for player in self.players:
+            player.calc_hand()
+
+        # if player.state_mapping == 1:
         #  return self.sum_hand(player_hand) - 1
-
-        if self.state_mapping == 2:
-            return (self.player.value- 1) + (18 * (self.dealer.get_dealer_card() - 1))
-        elif self.state_mapping == 3:
-         if self.player.usable_ace() and len(self.player.cards) <= 2:
-            return 181 + (self.player.value - 11) + (9 * (self.dealer.get_dealer_card() - 1))
-         else:
-            return (self.player.value - 1) + (18 * (self.dealer.get_dealer_card() - 1))
-        
-        self.player.value = 0
-        self.dealer.value = 0
+        if player is not self.player4:
+            if player.state_mapping == 2:
+                return (self.player2.value- 1) + (18 * (self.dealer.get_dealer_card() - 1))
+            elif player.state_mapping == 3:
+                if self.player.usable_ace() and len(self.player.cards) <= 2:
+                    return 181 + (self.player.value - 11) + (9 * (self.dealer.get_dealer_card() - 1))
+                else:
+                    return (self.player.value - 1) + (18 * (self.dealer.get_dealer_card() - 1))
         
     
-    def policy_run(self):
+    def policy_run(self, player):
         if not self.dealer.cards:
            return
 
-        state = self.hand_to_state()
-        action = self.policy[state]
+        if player is self.player2 or player is self.player3:
+            print(player.name)
+            state = self.hand_to_state(player)
+            action = player.policy[state]
 
-        time.sleep(2)
-        if action: # hit: add a card to players hand and return
-            game_texts('AI Hitting', display_width/2,650, True)
-            self.hit()
-        else: # stick: play out the dealers hand, and score
-            game_texts('AI standing', display_width/2,650, True)
+            if action: # hit: add a card to players hand and return
+                print(player.name, 'Hitting')
+                self.hit(player)
+            else: # stick: play out the dealers hand, and score
+                print(player.name, 'standing')
+                self.stand(player)
 
-            self.stand()
+        elif (player is self.player4):
+            return
+            # prediction = model.predict( np.array([self.AI_3_HAND]) , verbose = 0)
+            # action = 0 if prediction[0][0] > prediction[0][1] else 1
+            # if action: # hit: add a card to players hand and return
+            #     print(player.name, 'Hitting')
+            #     self.hit(player)
+            # else: # stick: play out the dealers hand, and score
+            #     print(player.name, 'standing')
+            #     self.stand(player)
+
+
 
 
     def deal(self):
+        if not self.game_active:
+            self.game_active = True
+        if self.dealer.cards:
+            return
+        
         for i in range(2):
-            self.dealer.add_card(self.deck.deal())
-            self.player.add_card(self.deck.deal())
+            for player in self.players:
+                player.add_card(self.deck.deal())
 
-        # print(self.dealer.cards)
-              
-              
-    
+        for player in self.players:
+            for card in player.cards:
+                card_value, suit  = card
+                index = card_to_index(card_value, suit)
+                self.AI_1_HAND[index] = 1
+                self.AI_2_HAND[index] = 1
+                self.AI_3_HAND[index] = 1
+
+        self.player1.calc_hand()
+        self.dealer.calc_hand()
+        self.AI_1_HAND[0] = self.player1.value
+        self.AI_2_HAND[0] = self.player1.value
+        self.AI_3_HAND[0] = self.player1.value
+
+        self.AI_1_HAND[1] = self.dealer.value
+        self.AI_2_HAND[1] = self.dealer.value
+        self.AI_3_HAND[1] = self.dealer.value
+        
+            
+
+        print("AI 1's cards are:", self.player2.cards)
+        print("AI 2's cards are:", self.player3.cards)
+        print("AI 3's cards are:", self.player4.cards)
+        print(self.AI_3_HAND)
+
+
         self.dealer.display_cards()
-        self.player.display_cards()
+        self.player1.display_cards()
+        self.player2.display_cards()
+        self.player3.display_cards()
         self.player_card = 1
+
         # dealer_card = pygame.image.load('img/' + self.dealer.card_img[0] + '.png').convert()
         # dealer_card_2 = pygame.image.load('img/back.png').convert()
             
-        # player_card = pygame.image.load('img/' + self.player.card_img[0] + '.png').convert()
-        # player_card_2 = pygame.image.load('img/' + self.player.card_img[1] + '.png').convert()
+        # player_card = pygame.image.load('img/' + self.player1.card_img[0] + '.png').convert()
+        # player_card_2 = pygame.image.load('img/' + self.player1.card_img[1] + '.png').convert()
 
+        
         game_texts("Dealer's hand is:", display_width/2, 55)
-        self.draw_cards(self.dealer.card_img, 0)
+        game_texts("AI 1's hand is:", display_width/4, display_height/2-25)
+        game_texts("AI 2's hand is:", 3*display_width/4, display_height/2-25)
 
         # gameDisplay.blit(dealer_card, (400, 200))
         # gameDisplay.blit(dealer_card_2, (550, 200))
+        self.draw_cards(self.dealer.card_img, 0)
+
 
         game_texts("Your's hand is:", display_width/2, 475)
         
-        self.draw_cards(self.player.card_img, 2)
         # gameDisplay.blit(player_card, (300, 450))
         # gameDisplay.blit(player_card_2, (410, 450))
+
+        # pygame.display.update()
+        self.draw_cards(self.player1.card_img, 2)
+
+        self.draw_cards(self.player2.card_img, 1)
+        self.draw_cards(self.player3.card_img, 3)
+
+
+        time.sleep(1)
         self.blackjack()
-        
-        
-            
+
+    def hit(self, player=None):
+        if not player:
+            player = self.player1
+        player.add_card(self.deck.deal())
     
-    def hit(self):
-        self.player.add_card(self.deck.deal())
-        self.blackjack()
-        self.player_card += 1
-                
-        if self.player.value > 21:
-            # show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
-            self.draw_cards(self.dealer.card_img, 0, True)
-            # gameDisplay.blit(show_dealer_card, (550, 200))
-            game_finish("You Busted!", display_width/2, 250, red)
-            time.sleep(4)
-            self.play_or_exit()
+
+        for card in player.cards:
+            card_value, suit  = card
+            index = card_to_index(card_value, suit)
+            self.AI_1_HAND[index] = 1
+            self.AI_2_HAND[index] = 1
+            self.AI_3_HAND[index] = 1
+
+        # self.blackjack(player)
+        player.value = 0
+        if player == self.player1:
+            self.player_card += 1
+        
+            if self.player_card == 2:
+                player.calc_hand()
+
+                self.AI_1_HAND[0] = self.player1.value
+                self.AI_2_HAND[0] = self.player1.value
+                self.AI_3_HAND[0] = self.player1.value
+
+                player.display_cards()
+                # player_card_3 = pygame.image.load('img/' + self.player1.card_img[2] + '.png').convert()
+                # gameDisplay.blit(player_card_3, (520, 450))
+                self.draw_cards(self.player1.card_img, 2)
+
+
+            if self.player_card == 3:
+                player.calc_hand()
+
+                self.AI_1_HAND[0] = self.player1.value
+                self.AI_2_HAND[0] = self.player1.value
+                self.AI_3_HAND[0] = self.player1.value
+
+                player.display_cards()
+                # player_card_4 = pygame.image.load('img/' + self.player1.card_img[3] + '.png').convert()
+                # gameDisplay.blit(player_card_4, (630, 450))
+                self.draw_cards(self.player1.card_img, 2)
+
+            
+            if self.player_card == 4:
+                player.calc_hand()
+
+                self.AI_1_HAND[0] = self.player1.value
+                self.AI_2_HAND[0] = self.player1.value
+                self.AI_3_HAND[0] = self.player1.value
+
+                player.display_cards()
+                # player_card_5 = pygame.image.load('img/' + self.player1.card_img[4] + '.png').convert()
+                # gameDisplay.blit(player_card_5, (740, 450))
+                self.draw_cards(self.player1.card_img, 2)
+
+            pygame.display.update()
+
         else:
-            self.player.calc_hand()
-            self.player.display_cards()
-            # player_card_3 = pygame.image.load('img/' + self.player.card_img[2] + '.png').convert()
-            # gameDisplay.blit(player_card_3, (520, 450))
-            self.draw_cards(self.player.card_img, 2)
+            player.calc_hand()
+            if player == self.player2:
+                player.display_cards()
+                self.draw_cards(self.player2.card_img, 1)
+            if player == self.player3:
+                player.display_cards()
+                self.draw_cards(self.player3.card_img, 3)
+
+
+            self.AI_1_HAND[0] = self.player1.value
+            self.AI_2_HAND[0] = self.player1.value
+            self.AI_3_HAND[0] = self.player1.value
             
-        self.player.value = 0
+            print(player.name, "cards:", player.cards)
+            time.sleep(1)
             
+        if player.value == 21:
+            self.turn += 1
+
+        if player.value > 21:
+            player.busted = True
+            print(player.name, "BUSTED!")
+            print(player.cards)
+            self.turn += 1
+            time.sleep(2)
             
-    def stand(self):
-        # print("standing")
-        # print(self.dealer.card_img)
-        # print()
+        player.value = 0
+
+            
+    def stand(self, player=None):
+        if not player: #not dealer
+            player = self.player1
+        self.turn += 1  
+        time.sleep(1)      
+        
+
+    def check_winner(self):
+        global game_winners
         # show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
         # gameDisplay.blit(show_dealer_card, (550, 200))
         self.draw_cards(self.dealer.card_img, 0, True)
-        self.blackjack()
-        self.dealer.calc_hand()
-        self.player.calc_hand()
-        if self.player.value > self.dealer.value:
-            game_finish("You Won!", display_width/2, display_height/2, green)
-            time.sleep(4)
-            self.play_or_exit()
-        elif self.player.value < self.dealer.value:
-            game_finish("Dealer Wins!", display_width/2, display_height/2, red)
-            time.sleep(4)
-            self.play_or_exit()
+
+
+
+        for player in self.players:
+            player.value = 0
+            player.calc_hand()
+            if player.value == 21:
+                self.blackjack()
+                return
+
+        for player in self.players: #print dealer and user total
+            print(player.name, 'total:', player.value)
+    
+        highest_score = max([player.value for player in self.players if not player.busted], default=0)
+        winners = [player for player in self.players if player.value == highest_score and not player.busted]
+        print()
+        if len(winners) == 1:
+            winner = winners[0]
+            print(f'{winner.name} Won!')
+            winner.wins += 1
+            if winner == self.dealer:
+                game_winners[0] += 1
+            elif winner == self.player1:
+                game_winners[1] += 1
+            elif winner == self.player2:
+                game_winners[2] += 1
+            elif winner == self.player3:
+                game_winners[3] += 1
+            else:
+                print("no such player")
+            game_finish(f'{winner.name} Wins!', 500, 250, green)
         else:
-            game_finish("It's a Tie!", display_width/2, display_height/2, grey)
-            time.sleep(4)
-            self.play_or_exit()
-        
+            winner_names = " and ".join([winner.name for winner in winners])
+            print(f'It\'s a Tie! {winner_names} Won!')
+            game_finish(f'It\'s a Tie! {winner_names} Won!', 500, 250, grey)
+            for winner in winners:
+                if winner == self.dealer:
+                    game_winners[0] += 1
+                elif winner == self.player1:
+                    game_winners[1] += 1
+                elif winner == self.player2:
+                    game_winners[2] += 1
+                elif winner == self.player3:
+                    game_winners[3] += 1
+                else:
+                    print("no such player")
+
+        print()
+        time.sleep(4)
+        self.play_or_exit()
+      
+        return
     
     def exit(self):
         sys.exit()
     
     def play_or_exit(self):
-        game_texts("Play again press Deal!", display_width/2, 650)
-        time.sleep(3)
-        self.player.value = 0
-        self.dealer.value = 0
-        self.deck = Deck()
-        self.dealer = Hand()
-        self.player = Hand()
+        self.game_active = False
+        if self.NUM_ROUNDS == 3:
+            self.NUM_ROUNDS = 0
+            self.AI_1_HAND = [0]*54 
+            self.AI_2_HAND = [0]*54
+            self.AI_3_HAND = [0]*54
+        self.NUM_ROUNDS +=1
+
+        game_texts("Play again press Deal!", 200, 80)
+        self.turn = 1
+
+        if self.NUM_ROUNDS == 1:
+            self.deck = Deck()
+        print("THE ROUND IS: ", self.NUM_ROUNDS)
+
+        for player in self.players:
+            player.reset()
+            print(player.name, "wins:", player.wins)
+        print()
         self.deck.shuffle()
         gameDisplay.fill(background_color)
         # pygame.draw.rect(gameDisplay, grey, pygame.Rect(0, 0, 250, 700))
@@ -323,24 +630,121 @@ class Play:
     
     
 
-params = Params()     
-play_blackjack = Play(params)
 
-running = True
 
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+def game():
+    global ai1_policy, ai2_policy, ai1_statemapping, ai2_statemapping
+    ai1_policy = 'QLearning_policy_mapping_2.policy'
+    ai2_policy = "QLearning_policy_mapping_2.policy"
+    params = [Params('fixed_policy', ai1_policy, ai1_statemapping), Params('fixed_policy', ai2_policy, ai2_statemapping) ]   
+    play_blackjack = Play(params)
+    running = True
+    gameDisplay.fill(background_color)
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
 
-        button("Deal", 770, 600, 120, 40, light_slat, dark_slat, play_blackjack.deal)
-        # button("Hit", 30, 200, 150, 50, light_slat, dark_slat, play_blackjack.hit)
-        # button("Stand", 30, 300, 150, 50, light_slat, dark_slat, play_blackjack.stand)
-        button("EXIT", 770, 650, 120, 40, light_slat, dark_red, play_blackjack.exit)
+            button("Deal", 770, 500, 120, 40, light_slat, dark_slat, play_blackjack.deal, not play_blackjack.game_active)
+            button("Hit", 770, 550, 120, 40, light_slat, dark_slat, play_blackjack.hit, play_blackjack.game_active)
+            button("Stand", 770, 600, 120, 40, light_slat, dark_slat, play_blackjack.stand, play_blackjack.game_active)
+            button("EXIT", 770, 650, 120, 40, light_slat, dark_red, play_blackjack.exit)
+            button("win rates", 30, 600, 120, 40, light_slat, dark_slat, show_winrate_screen, not play_blackjack.game_active, [play_blackjack])
 
-        if params.action_type == 'fixed_policy':
-           
-            play_blackjack.policy_run()
-            # time.sleep(5)
-    
-    pygame.display.flip()
+            button("Change", 30, 650, 120, 40, light_slat, dark_slat, show_policy_selection_screen, not play_blackjack.game_active)
+
+
+
+            if play_blackjack.turn == 2:
+                play_blackjack.policy_run(play_blackjack.player2)
+                print('player 2')
+                time.sleep(1)
+            if play_blackjack.turn == 3:
+                play_blackjack.policy_run(play_blackjack.player3)
+                print('player 3')
+                time.sleep(1)
+
+            if NN_YES:
+                if play_blackjack.turn == 4:
+                    play_blackjack.policy_run(play_blackjack.player4)
+                if play_blackjack.turn == 5:
+                    print()
+                    print('checking winner')
+                    play_blackjack.check_winner()
+            else: 
+                if play_blackjack.turn == 4:
+                    print()
+                    print('checking winner')
+                    play_blackjack.check_winner()
+        
+        pygame.display.flip()
+def option_text(text, x, y, color):
+    TextSurf, TextRect = end_text_objects(text, blackjack, color)
+    TextRect.center = (x, y)
+    gameDisplay.blit(TextSurf, TextRect)
+    pygame.display.update()
+
+
+
+def set_policy(ai, policy_name, statemapping):
+    global ai1_policy, ai2_policy, ai1_statemapping, ai2_statemapping, game_winners
+    if ai == 'AI1':
+        ai1_policy = policy_name
+        ai1_statemapping = statemapping
+    elif ai == 'AI2':
+        ai2_policy = policy_name
+        ai2_statemapping = statemapping
+    gameDisplay.fill(background_color, rect=[225, 200, 500, 50])
+    pygame.display.update()
+    game_winners = [0,0,0,0]
+    print(f"{ai} policy set to {policy_name}")
+    print(f"{ai} statemapping set to {statemapping}")
+
+
+def show_policy_selection_screen():
+    running = True
+    gameDisplay.fill(background_color)
+    option_text("AI 1's policy", 150, 100, black)
+    option_text("AI 2's policy", 750, 100, black)
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+        button("Q Learning", 100, 200, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", 'QLearning_policy_mapping_2.policy', 2])
+        button("Q Learning", 700, 200, 100, 40, light_slat, dark_slat, set_policy, True, ["AI2", 'QLearning_policy_mapping_2.policy', 2])
+        button("NN", 100, 300, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", "NN"]) # not sure where to get NN's policy
+        button("NN", 700, 300, 100, 40, light_slat, dark_slat, set_policy, True, ["AI2", "NN"])
+        button("Value Iteration", 100, 400, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", 'Value_Iteration_Policy_2.policy', 2])
+        button("Value Iteration", 700, 400, 100, 40, light_slat, dark_slat, set_policy, True, ["AI2", 'Value_Iteration_Policy_2.policy', 2])
+
+        button("Back", 770, 650, 120, 40, light_slat, dark_slat, game, True)
+        if ai1_policy == 'QLearning_policy_mapping_2.policy':
+            option_text('Selected', 275, 225, black)
+        if ai2_policy == 'QLearning_policy_mapping_2.policy':
+            option_text('Selected', 625, 225, black)
+        # add for more policies
+        if ai1_policy == 'Value_Iteration_Policy_2.policy':
+            option_text('Selected', 275, 425, black)
+        if ai2_policy == 'Value_Iteration_Policy_2.policy':
+            option_text('Selected', 625, 425, black)
+        pygame.display.flip()
+
+
+def show_winrate_screen(game_state):
+    global game_winners
+    running = True
+    gameDisplay.fill(background_color)
+    option_text(f"AI 1's win rate: {game_winners[2]}", 150, 100, black)
+    option_text(f"AI 2's win rate: {game_winners[3]}", 150, 200, black)
+    option_text(f"Dealer's win rate: {game_winners[0]}", 150, 300, black)
+    option_text(f"Your win rate: {game_winners[1]}", 150, 400, black)
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+        button("back", 770, 650, 120, 40, light_slat, dark_slat, game, True)
+
+        pygame.display.flip()
+
+
+game()

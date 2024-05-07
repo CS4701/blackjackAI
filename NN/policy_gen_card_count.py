@@ -9,7 +9,7 @@ import keras
 # helper libs
 import numpy as np
 import matplotlib.pyplot as plt
-import blackjack as bj
+import Blackjack as bj
 from itertools import product, combinations
 import time
 import pickle
@@ -21,11 +21,11 @@ import random
 #input array to predict
 
 #First load the Card Counting NN model
-json_file = open('models/blackjackmodel.3.json', 'r')
+json_file = open('\models\blackjackmodel.3.json', 'r')
 loaded_model_json = json_file.read()
 json_file.close()
 model = keras.models.model_from_json( loaded_model_json, custom_objects={"GlorotUniform": tf.keras.initializers.glorot_uniform} )
-model.load_weights( "models/blackjackmodel.3.h5" )
+model.load_weights( "\models\blackjackmodel.3.h5" )
 print( "Model loaded from disk" )
 
 
