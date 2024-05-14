@@ -350,6 +350,7 @@ class Play:
 
         if player is self.player2 or player is self.player3:
             print(player.name)
+            print("in here")
             state = self.hand_to_state(player)
             action = player.policy[state]
 
@@ -361,6 +362,7 @@ class Play:
                 self.stand(player)
 
         elif (player is self.player4):
+            print("check")
             return
             # prediction = model.predict( np.array([self.AI_3_HAND]) , verbose = 0)
             # action = 0 if prediction[0][0] > prediction[0][1] else 1
@@ -540,7 +542,37 @@ class Play:
             player = self.player1
         self.turn += 1  
         time.sleep(1)      
-        
+    
+    def play_dealer(self):
+        self.dealer.value = 0
+        self.dealer.calc_hand()
+
+        # show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
+        # gameDisplay.blit(show_dealer_card, (550, 200))
+        print("Dealer value: ", self.dealer.value)
+        while (self.dealer.value < 17):
+            print("dealer hitting")
+            self.dealer.add_card(self.deck.deal())
+            print("dealer cards", self.dealer.cards)
+            self.dealer.display_cards()
+            print("dealer cards", self.dealer.card_img)
+            # last_dealer_card = pygame.image.load('img/' + self.dealer.card_img[-1] + '.png').convert()
+            # gameDisplay.blit(last_dealer_card, (550 + 110 * (len(self.dealer.cards) - 2), 200))
+            self.dealer.value = 0
+            self.dealer.calc_hand()
+
+        if self.dealer.value == 21:
+            self.turn += 1
+        elif self.dealer.value > 21:
+            self.dealer.busted = True
+            print(self.dealer.name, "BUSTED!")
+            print(self.dealer.cards)
+            self.turn += 1
+            time.sleep(2)
+        else:
+            self.stand(self.dealer)
+            
+        self.dealer.value = 0
 
     def check_winner(self):
         global game_winners
@@ -656,26 +688,25 @@ def game():
 
 
             if play_blackjack.turn == 2:
+                print(play_blackjack.player2.state_mapping)
+
+                print(play_blackjack.player3.state_mapping)
                 play_blackjack.policy_run(play_blackjack.player2)
-                print('player 2')
+                print('player 1')
                 time.sleep(1)
             if play_blackjack.turn == 3:
                 play_blackjack.policy_run(play_blackjack.player3)
-                print('player 3')
+                print('player 2')
                 time.sleep(1)
 
-            if NN_YES:
-                if play_blackjack.turn == 4:
-                    play_blackjack.policy_run(play_blackjack.player4)
-                if play_blackjack.turn == 5:
-                    print()
-                    print('checking winner')
-                    play_blackjack.check_winner()
-            else: 
-                if play_blackjack.turn == 4:
-                    print()
-                    print('checking winner')
-                    play_blackjack.check_winner()
+            if play_blackjack.turn == 4:
+                print("Dealer:")
+                play_blackjack.play_dealer()
+                time.sleep(1)
+            if play_blackjack.turn == 5:
+                print()
+                print('checking winner')
+                play_blackjack.check_winner()
         
         pygame.display.flip()
 def option_text(text, x, y, color):

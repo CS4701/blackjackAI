@@ -11,11 +11,11 @@ class Params():
     self.num_games = 20000
   # Filepath to fixed policy file (only used for 'fixed_policy' input)
     # self.fixed_policy_filepath = os.path.join(os.getcwd(), 'Sarsa_policy_2.policy')
-    self.fixed_policy_filepath = os.path.join(os.getcwd(), 'QLearning_policy_mapping_1.policy') 
+    self.fixed_policy_filepath = os.path.join(os.getcwd(), 'qlearningcc.policy') 
     # self.fixed_policy_filepath = os.path.join(os.getcwd(), 'math_policy.policy')
 
   # Which state mapping algorithm to use (1 or 2)
-    self.state_mapping = 1
+    self.state_mapping = 4
     return
 
 """
@@ -175,7 +175,7 @@ class BlackJack_game():
     else:
         run_count -= 1
 
-    return self.sum_hand(self, player_hand) + dealer_up * 21 + (run_count + 10) * 21 * 21
+    return self.sum_hand(player_hand) + dealer_up * 21 + (run_count + 10) * 21 * 21
 
 
 # Map the current player's hand to a state index

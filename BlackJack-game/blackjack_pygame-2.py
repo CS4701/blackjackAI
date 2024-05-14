@@ -35,6 +35,8 @@ ai1_policy = None
 ai2_policy = None
 ai1_statemapping = 1
 ai2_statemapping = 2
+game_winners = [0, 0, 0, 0]
+
 pygame.init()
 
 clock = pygame.time.Clock()
@@ -255,7 +257,7 @@ class Play:
     def blackjack(self): #determine winners
         # self.dealer.value = 0
         # self.dealer.calc_hand()
-
+        global game_winners
         for player in self.players:
             player.value = 0
 
@@ -275,26 +277,39 @@ class Play:
 
 
 
-        if len(winners) > 1 and self.dealer in winners:
+        if len(winners) > 1:
             names_with_blackjack = " and ".join([winner.name for winner in winners])
             print(names_with_blackjack, "with BlackJack!")
             black_jack(f"It's a Tie! {names_with_blackjack} with BlackJack!", display_width/2, 250, grey)
-        elif len(winners) > 1:
-            winner_names = " and ".join([winner.name for winner in winners])
-
-            for w in winners:
-                w.wins +=1
-                print(f'{w.name} got BlackJack!')
-            black_jack( f'{winner_names} got BlackJack!', display_width/2, 250, green)
-                
+            for winner in winners:
+                if winner == self.dealer:
+                    game_winners[0] += 1
+                elif winner == self.player1:
+                    game_winners[1] += 1
+                elif winner == self.player2:
+                    game_winners[2] += 1
+                elif winner == self.player3:
+                    game_winners[3] += 1
+                else:
+                    print("no such player")
         else:
             winner = winners[0]
             winner.wins += 1
+            if winner == self.dealer:
+                game_winners[0] += 1
+            elif winner == self.player1:
+                game_winners[1] += 1
+            elif winner == self.player2:
+                game_winners[2] += 1
+            elif winner == self.player3:
+                game_winners[3] += 1
+            else:
+                print("no such player")
             print(f'{winner.name} got BlackJack!')
             black_jack( f'{winner.name} got BlackJack!', display_width/2, 250, green)
         
         time.sleep(4)
-        self.play_or_exit()  
+        self.play_or_exit() 
         
     
     # Load policy from input .policy file into self.policy
@@ -550,7 +565,39 @@ class Play:
         time.sleep(1)      
         
 
+    def play_dealer(self):
+        self.dealer.value = 0
+        self.dealer.calc_hand()
+
+        # show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
+        # gameDisplay.blit(show_dealer_card, (550, 200))
+
+        while (self.dealer.value < 17):
+            print("dealer hitting")
+            self.dealer.add_card(self.deck.deal())
+            print("dealer cards", self.dealer.cards)
+            self.dealer.display_cards()
+            print("dealer cards", self.dealer.card_img)
+            # last_dealer_card = pygame.image.load('img/' + self.dealer.card_img[-1] + '.png').convert()
+            # gameDisplay.blit(last_dealer_card, (550 + 110 * (len(self.dealer.cards) - 2), 200))
+            self.dealer.value = 0
+            self.dealer.calc_hand()
+
+        if self.dealer.value == 21:
+            self.turn += 1
+        elif self.dealer.value > 21:
+            self.dealer.busted = True
+            print(self.dealer.name, "BUSTED!")
+            print(self.dealer.cards)
+            self.turn += 1
+            time.sleep(2)
+        else:
+            self.stand(self.dealer)
+            
+        self.dealer.value = 0
+
     def check_winner(self):
+        global game_winners
         # show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
         # gameDisplay.blit(show_dealer_card, (550, 200))
         self.draw_cards(self.dealer.card_img, 0, True)
@@ -574,18 +621,32 @@ class Play:
             winner = winners[0]
             print(f'{winner.name} Won!')
             winner.wins += 1
+            if winner == self.dealer:
+                game_winners[0] += 1
+            elif winner == self.player1:
+                game_winners[1] += 1
+            elif winner == self.player2:
+                game_winners[2] += 1
+            elif winner == self.player3:
+                game_winners[3] += 1
+            else:
+                print("no such player")
             game_finish(f'{winner.name} Wins!', 500, 250, green)
-        elif self.dealer not in winners:
-            winner_names = " and ".join([winner.name for winner in winners])
-            game_finish(f'{winner_names} Win!', 500, 250, green)
-
-            for w in winners:
-                w.wins+=1
-            
         else:
             winner_names = " and ".join([winner.name for winner in winners])
             print(f'It\'s a Tie! {winner_names} Won!')
             game_finish(f'It\'s a Tie! {winner_names} Won!', 500, 250, grey)
+            for winner in winners:
+                if winner == self.dealer:
+                    game_winners[0] += 1
+                elif winner == self.player1:
+                    game_winners[1] += 1
+                elif winner == self.player2:
+                    game_winners[2] += 1
+                elif winner == self.player3:
+                    game_winners[3] += 1
+                else:
+                    print("no such player")
 
         print()
         time.sleep(4)
@@ -674,6 +735,11 @@ def game():
                 time.sleep(1)
 
             if play_blackjack.turn == 4:
+                print("Dealer:")
+                play_blackjack.play_dealer()
+                time.sleep(1)
+
+            if play_blackjack.turn == 5:
                 print()
                 print('checking winner')
                 play_blackjack.check_winner()
@@ -709,19 +775,17 @@ def option_text(text, x, y, color, select_panel= False):
 
 
 
-def set_policy(ai, policy_name, statemapping = None ):
-    global ai1_policy, ai2_policy, ai1_statemapping, ai2_statemapping
+def set_policy(ai, policy_name, statemapping):
+    global ai1_policy, ai2_policy, ai1_statemapping, ai2_statemapping, game_winners
     if ai == 'AI1':
         ai1_policy = policy_name
         ai1_statemapping = statemapping
-        print(f"state mapping for AI 1: {statemapping}")
     elif ai == 'AI2':
         ai2_policy = policy_name
         ai2_statemapping = statemapping
-        print(f"state mapping for AI 2: {statemapping}")
-
     gameDisplay.fill(background_color, rect=[225, 200, 500, 50])
     pygame.display.update()
+    game_winners = [0,0,0,0]
     print(f"{ai} policy set to {policy_name}")
     print(f"{ai} statemapping set to {statemapping}")
 
@@ -774,12 +838,13 @@ def show_policy_selection_screen():
 
 
 def show_winrate_screen(game_state):
+    global game_winners
     running = True
     gameDisplay.fill(background_color)
-    option_text(f"AI 1's win rate: {game_state.player2.wins}", 150, 100, black)
-    option_text(f"AI 2's win rate: {game_state.player3.wins}", 150, 200, black)
-    option_text(f"Dealer's win rate: {game_state.dealer.wins}", 150, 300, black)
-    option_text(f"Your win rate: {game_state.player1.wins}", 150, 400, black)
+    option_text(f"AI 1's win rate: {game_winners[2]}", 150, 100, black)
+    option_text(f"AI 2's win rate: {game_winners[3]}", 150, 200, black)
+    option_text(f"Dealer's win rate: {game_winners[0]}", 150, 300, black)
+    option_text(f"Your win rate: {game_winners[1]}", 150, 400, black)
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
