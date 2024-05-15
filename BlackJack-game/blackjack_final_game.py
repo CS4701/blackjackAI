@@ -26,6 +26,7 @@ ai2_policy = None
 ai1_statemapping = 1
 ai2_statemapping = 2
 game_winners = [0, 0, 0, 0]
+total_games = [0,0,0,0]
 
 pygame.init()
 
@@ -267,7 +268,7 @@ class Play:
 
 
 
-        if len(winners) > 1:
+        if len(winners) > 1 and self.dealer in winners:
             names_with_blackjack = " and ".join([winner.name for winner in winners])
             print(names_with_blackjack, "with BlackJack!")
             black_jack(f"It's a Tie! {names_with_blackjack} with BlackJack!", display_width/2, 250, grey)
@@ -282,9 +283,28 @@ class Play:
                     game_winners[3] += 1
                 else:
                     print("no such player")
+
+        elif len(winners) > 1:
+            winner_names = " and ".join([winner.name for winner in winners])
+
+            # for w in winners:
+            #     w.wins +=1
+            #     print(f'{w.name} got BlackJack!')
+            black_jack( f'{winner_names} got BlackJack!', display_width/2, 250, green)
+            for winner in winners:
+                if winner == self.dealer:
+                    game_winners[0] += 1
+                elif winner == self.player1:
+                    game_winners[1] += 1
+                elif winner == self.player2:
+                    game_winners[2] += 1
+                elif winner == self.player3:
+                    game_winners[3] += 1
+                else:
+                    print("no such player")
         else:
             winner = winners[0]
-            winner.wins += 1
+            # winner.wins += 1
             if winner == self.dealer:
                 game_winners[0] += 1
             elif winner == self.player1:
@@ -299,7 +319,7 @@ class Play:
             black_jack( f'{winner.name} got BlackJack!', display_width/2, 250, green)
         
         time.sleep(4)
-        self.play_or_exit() 
+        self.play_or_exit()  
         
     
     # Load policy from input .policy file into self.policy
@@ -340,23 +360,15 @@ class Play:
             # print(f'state_mapping_2 {player.value}')
             return (player.value- 1) + (18 * (self.dealer.get_dealer_card() - 1))
         elif player.state_mapping == 3:
-            if self.player.usable_ace() and len(self.player.cards) <= 2:
+            if player.useable_ace() and len(player.cards) <= 2:
                 return 181 + (player.value - 11) + (9 * (self.dealer.get_dealer_card() - 1))
             else:
                 return (player.value - 1) + (18 * (self.dealer.get_dealer_card() - 1))
+        elif player.state_mapping == 4:
+
+            run_count = 0
+            player.value + self.dealer.get_dealer_card() * 21 + (run_count + 10) * 21 * 21
     
-    
-
-
-
-
-
-
-
-
-
-
-
     def policy_run(self, player):
         if not self.dealer.cards:
            return
@@ -402,6 +414,11 @@ class Play:
 
 
     def deal(self):
+        global total_games
+        print('===========================================')
+        for i in range(len(total_games)):
+            total_games[i]+=1
+
         if not self.game_active:
             self.game_active = True
         if self.dealer.cards:
@@ -563,8 +580,8 @@ class Play:
         if not player: #not dealer
             player = self.player1
         self.turn += 1  
-        time.sleep(1)      
-        
+        time.sleep(1) 
+
 
     def play_dealer(self):
         self.dealer.value = 0
@@ -578,7 +595,7 @@ class Play:
             self.dealer.add_card(self.deck.deal())
             print("dealer cards", self.dealer.cards)
             self.dealer.display_cards()
-            print("dealer cards", self.dealer.card_img)
+            # print("dealer cards", self.dealer.card_img)
             # last_dealer_card = pygame.image.load('img/' + self.dealer.card_img[-1] + '.png').convert()
             # gameDisplay.blit(last_dealer_card, (550 + 110 * (len(self.dealer.cards) - 2), 200))
             self.dealer.value = 0
@@ -595,21 +612,20 @@ class Play:
         else:
             self.stand(self.dealer)
             
-        self.dealer.value = 0
-
-
-
-
-
-
-
-
-
+        self.dealer.value = 0     
+        
     def check_winner(self):
         global game_winners
         # show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
         # gameDisplay.blit(show_dealer_card, (550, 200))
         self.draw_cards(self.dealer.card_img, 0, True)
+        print("My cards are:", self.player1.cards)
+        print("Dealer cards are:", self.dealer.cards)
+        print("AI1 cards are:", self.player2.cards)
+        print("AI2 cards are:", self.player3.cards)
+
+
+
 
 
 
@@ -622,14 +638,26 @@ class Play:
 
         for player in self.players: #print dealer and user total
             print(player.name, 'total:', player.value)
-    
+
+        dealer_score = 0
+        if not self.dealer.busted:
+            dealer_score = self.dealer.value 
+
         highest_score = max([player.value for player in self.players if not player.busted], default=0)
-        winners = [player for player in self.players if player.value == highest_score and not player.busted]
+
+        if dealer_score == highest_score: #tie game
+            winners = [player for player in self.players if player.value >= dealer_score and not player.busted]
+        else: #tie game without dealer
+            winners = [player for player in self.players if player.value > dealer_score and not player.busted]
+
+
+        # highest_score = max([player.value for player in self.players if not player.busted], default=0)
+        # winners = [player for player in self.players if player.value == highest_score and not player.busted]
         print()
         if len(winners) == 1:
             winner = winners[0]
             print(f'{winner.name} Won!')
-            winner.wins += 1
+            # winner.wins += 1
             if winner == self.dealer:
                 game_winners[0] += 1
             elif winner == self.player1:
@@ -641,6 +669,25 @@ class Play:
             else:
                 print("no such player")
             game_finish(f'{winner.name} Wins!', 500, 250, green)
+       
+        elif self.dealer not in winners:
+            winner_names = " and ".join([winner.name for winner in winners])
+            game_finish(f'{winner_names} Win!', 500, 250, green)
+
+            # for w in winners:
+            #     w.wins+=1
+            for winner in winners:
+                if winner == self.dealer:
+                    game_winners[0] += 1
+                elif winner == self.player1:
+                    game_winners[1] += 1
+                elif winner == self.player2:
+                    game_winners[2] += 1
+                elif winner == self.player3:
+                    game_winners[3] += 1
+                else:
+                    print("no such player")
+            
         else:
             winner_names = " and ".join([winner.name for winner in winners])
             print(f'It\'s a Tie! {winner_names} Won!')
@@ -656,7 +703,6 @@ class Play:
                     game_winners[3] += 1
                 else:
                     print("no such player")
-
         print()
         time.sleep(4)
         self.play_or_exit()
@@ -666,24 +712,6 @@ class Play:
     def exit(self):
         sys.exit()
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def play_or_exit(self):
         self.game_active = False
         if self.NUM_ROUNDS == 3:
@@ -702,7 +730,7 @@ class Play:
 
         for player in self.players:
             player.reset()
-            print(player.name, "wins:", player.wins)
+            # print(player.name, "wins:", player.wins)
         print()
         self.deck.shuffle()
         gameDisplay.fill(background_color)
@@ -715,7 +743,7 @@ class Play:
 
 def game():
     global ai1_policy, ai2_policy, ai1_statemapping, ai2_statemapping
-    print(f"{ai1_statemapping}    {ai2_statemapping}")
+    # print(f"{ai1_statemapping}    {ai2_statemapping}")
     if ai1_policy is None and ai2_policy is None:
         ai1_policy = 'QLearning_policy_mapping_1.policy'
         ai2_policy = "QLearning_policy_mapping_2.policy"
@@ -750,9 +778,6 @@ def game():
 
 
             if play_blackjack.turn == 2:
-                print(play_blackjack.player2.state_mapping)
-
-                print(play_blackjack.player3.state_mapping)
                 play_blackjack.policy_run(play_blackjack.player2)
                 print('player 1')
                 time.sleep(1)
@@ -762,7 +787,7 @@ def game():
                 time.sleep(1)
 
             if play_blackjack.turn == 4:
-                print("Dealer:")
+                print('Dealer')
                 play_blackjack.play_dealer()
                 time.sleep(1)
 
@@ -802,22 +827,26 @@ def option_text(text, x, y, color, select_panel= False):
 
 
 
-def set_policy(ai, policy_name, statemapping):
+def set_policy(ai, policy_name, statemapping = None ):
     global ai1_policy, ai2_policy, ai1_statemapping, ai2_statemapping, game_winners
     if ai == 'AI1':
+        total_games[2]=0
+        game_winners[2]= 0
         ai1_policy = policy_name
         ai1_statemapping = statemapping
+        # print(f"state mapping for AI 1: {statemapping}")
     elif ai == 'AI2':
+        total_games[3]=0
+        game_winners[3]=0
         ai2_policy = policy_name
         ai2_statemapping = statemapping
+        # print(f"state mapping for AI 2: {statemapping}")
+
     gameDisplay.fill(background_color, rect=[225, 200, 500, 50])
     pygame.display.update()
-    game_winners = [0,0,0,0]
-    print(f"{ai} policy set to {policy_name}")
-    print(f"{ai} statemapping set to {statemapping}")
-
-
-
+    # game_winners = [0,0,0,0]
+    # print(f"{ai} policy set to {policy_name}")
+    # print(f"{ai} statemapping set to {statemapping}")
 
 
 def show_policy_selection_screen():
@@ -832,8 +861,8 @@ def show_policy_selection_screen():
         button("Q Learning 1.0", 100, 200, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", 'QLearning_policy_mapping_1.policy', 1])
         button("Q Learning 2.0", 700, 200, 100, 40, light_slat, dark_slat, set_policy, True, ["AI2", 'QLearning_policy_mapping_2.policy', 2])
 
-        button("NN", 100, 300, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", "NN"]) 
-        button("NN", 700, 300, 100, 40, light_slat, dark_slat, set_policy, True, ["AI2", "NN"])
+        button("Math Policy", 100, 300, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", "math_policy.policy", 3]) 
+        button("NN Card Count", 700, 300, 100, 40, light_slat, dark_slat, set_policy, True, ["AI2", "NN"])
 
         button("Value Iteration 1.0", 100, 400, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", 'Value_Iteration_Policy_1.policy', 1])
         button("Value Iteration 2.0", 700, 400, 100, 40, light_slat, dark_slat, set_policy, True, ["AI2", 'Value_Iteration_Policy_2.policy', 2])
@@ -845,7 +874,7 @@ def show_policy_selection_screen():
 
         if ai1_policy == 'QLearning_policy_mapping_1.policy':
             option_text('Selected', 325, 225, black, select_panel=True)
-        elif ai1_policy == 'NN':
+        elif ai1_policy == 'math_policy.policy':
             option_text('Selected', 325, 325, black, select_panel= True)
         elif ai1_policy == 'Value_Iteration_Policy_1.policy':
             option_text('Selected', 325, 425, black, select_panel= True)
@@ -868,13 +897,18 @@ def show_policy_selection_screen():
 
 
 def show_winrate_screen(game_state):
-    global game_winners
+    global game_winners, total_games
+
     running = True
     gameDisplay.fill(background_color)
-    option_text(f"AI 1's win rate: {game_winners[2]}", 150, 100, black)
-    option_text(f"AI 2's win rate: {game_winners[3]}", 150, 200, black)
-    option_text(f"Dealer's win rate: {game_winners[0]}", 150, 300, black)
-    option_text(f"Your win rate: {game_winners[1]}", 150, 400, black)
+    option_text(f"AI 1's win rate: {game_winners[2]}/{total_games[2]}", 150, 100, black)
+    option_text(f"AI 2's win rate: {game_winners[3]}/{total_games[3]}", 150, 200, black)
+    option_text(f"Dealer's win rate: {game_winners[0]}/{total_games[0]}", 150, 300, black)
+    option_text(f"Your win rate: {game_winners[1]}/{total_games[1]}", 150, 400, black)
+    # option_text(f"AI 1's win: {game_state.player2.wins}", 150, 100, black)
+    # option_text(f"AI 2's win: {game_state.player3.wins}", 150, 200, black)
+    # option_text(f"Dealer's win: {game_state.dealer.wins}", 150, 300, black)
+    # option_text(f"Your win: {game_state.player1.wins}", 150, 400, black)
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
