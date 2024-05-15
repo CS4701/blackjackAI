@@ -27,6 +27,7 @@ ai1_statemapping = 1
 ai2_statemapping = 2
 game_winners = [0, 0, 0, 0]
 total_games = [0,0,0,0]
+run_count = 0
 
 pygame.init()
 
@@ -245,6 +246,14 @@ class Play:
 
         
 
+    def run_count_update(self, card):
+        global run_count
+        if card[0] in 'JQKA':
+            run_count -= 1
+        elif int(card[0]) < 7:
+            run_count += 1
+
+
     def blackjack(self): #determine winners
         # self.dealer.value = 0
         # self.dealer.calc_hand()
@@ -266,7 +275,7 @@ class Play:
         # gameDisplay.blit(show_dealer_card, (550, 200))
         self.draw_cards(self.dealer.card_img, 0, True)
 
-
+        
 
         if len(winners) > 1 and self.dealer in winners:
             names_with_blackjack = " and ".join([winner.name for winner in winners])
@@ -344,6 +353,7 @@ class Play:
         #     raise ValueError("Policy file path not set for the player.")
     
     def hand_to_state(self, player):
+        global run_count
         # print(player.state_mapping)
         for p in self.players:
             p.value = 0
@@ -366,8 +376,7 @@ class Play:
                 return (player.value - 1) + (18 * (self.dealer.get_dealer_card() - 1))
         elif player.state_mapping == 4:
 
-            run_count = 0
-            player.value + self.dealer.get_dealer_card() * 21 + (run_count + 10) * 21 * 21
+            return player.value + self.dealer.get_dealer_card() * 21 + (run_count + 10) * 21 * 21
     
     def policy_run(self, player):
         if not self.dealer.cards:
@@ -427,6 +436,7 @@ class Play:
         for _ in range(2):
             for player in self.players:
                 player.add_card(self.deck.deal())
+                self.run_count_update(player.cards[-1])
 
         for player in self.players:
             for card in player.cards:
@@ -492,6 +502,7 @@ class Play:
         if not player:
             player = self.player1
         player.add_card(self.deck.deal())
+        self.run_count_update(player.cards[-1])
     
 
         for card in player.cards:
@@ -593,6 +604,7 @@ class Play:
         while (self.dealer.value < 16):
             print("dealer hitting")
             self.dealer.add_card(self.deck.deal())
+            self.run_count_update(self.dealer.cards[-1])
             print("dealer cards", self.dealer.cards)
             self.dealer.display_cards()
             # print("dealer cards", self.dealer.card_img)
@@ -623,11 +635,6 @@ class Play:
         print("Dealer cards are:", self.dealer.cards)
         print("AI1 cards are:", self.player2.cards)
         print("AI2 cards are:", self.player3.cards)
-
-
-
-
-
 
         for player in self.players:
             player.value = 0
@@ -713,11 +720,14 @@ class Play:
         sys.exit()
     
     def play_or_exit(self):
+        global run_count
+        print(f'run count: {run_count}')
         self.game_active = False
         if self.NUM_ROUNDS == 3:
             self.NUM_ROUNDS = 0
             self.AI_1_HAND = [0]*54 
             self.AI_2_HAND = [0]*54
+            run_count = 0
             # self.AI_3_HAND = [0]*54
         self.NUM_ROUNDS +=1
 
@@ -807,6 +817,9 @@ def option_text(text, x, y, color, select_panel= False):
     Y = TextRect.y
     if select_panel:
 
+        TextRect.y = Y + 400
+        pygame.draw.rect(gameDisplay, background_color , TextRect)
+
         TextRect.y = Y + 300
         pygame.draw.rect(gameDisplay, background_color , TextRect)
 
@@ -823,6 +836,9 @@ def option_text(text, x, y, color, select_panel= False):
         pygame.draw.rect(gameDisplay,background_color , TextRect)
 
         TextRect.y = Y - 300
+        pygame.draw.rect(gameDisplay, background_color , TextRect)
+
+        TextRect.y = Y - 400
         pygame.draw.rect(gameDisplay, background_color , TextRect)
 
 
@@ -861,7 +877,7 @@ def show_policy_selection_screen():
         button("Q Learning 1.0", 100, 200, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", 'QLearning_policy_mapping_1.policy', 1])
         button("Q Learning 2.0", 700, 200, 100, 40, light_slat, dark_slat, set_policy, True, ["AI2", 'QLearning_policy_mapping_2.policy', 2])
 
-        button("Math Policy", 100, 300, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", "math_policy.policy", 3]) 
+        button("QL CC", 100, 300, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", "qlearningcc.policy", 4]) 
         button("NN Card Count", 700, 300, 100, 40, light_slat, dark_slat, set_policy, True, ["AI2", "NN"])
 
         button("Value Iteration 1.0", 100, 400, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", 'Value_Iteration_Policy_1.policy', 1])
@@ -870,16 +886,22 @@ def show_policy_selection_screen():
         button("SARSA 1.0", 100, 500, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", 'Sarsa_Policy_1.policy', 1])
         button("SARSA 2.0", 700, 500, 100, 40, light_slat, dark_slat, set_policy, True, ["AI2", 'Sarsa_Policy_2.policy', 2])
 
+
+        button("Math Policy", 100, 600, 100, 40, light_slat, dark_slat, set_policy, True, ["AI1", "math_policy.policy", 3]) 
+        button("NN no CC", 700, 600, 100, 40, light_slat, dark_slat, set_policy, True, ["AI2", "model_predictions2.policy", 1])
+
         button("Back", 770, 650, 120, 40, light_slat, dark_slat, game, True)
 
         if ai1_policy == 'QLearning_policy_mapping_1.policy':
             option_text('Selected', 325, 225, black, select_panel=True)
-        elif ai1_policy == 'math_policy.policy':
+        elif ai1_policy == 'qlearningcc.policy':
             option_text('Selected', 325, 325, black, select_panel= True)
         elif ai1_policy == 'Value_Iteration_Policy_1.policy':
             option_text('Selected', 325, 425, black, select_panel= True)
         elif ai1_policy == 'Sarsa_Policy_1.policy':
             option_text('Selected', 325, 525, black, select_panel= True)
+        elif ai1_policy == 'math_policy.policy':
+            option_text('Selected', 325, 625, black, select_panel= True)
 
 
 
@@ -891,7 +913,8 @@ def show_policy_selection_screen():
             option_text('Selected', 575, 425, black, select_panel= True)
         elif ai2_policy == 'Sarsa_Policy_2.policy':
             option_text('Selected', 575, 525, black, select_panel= True)
-
+        elif ai2_policy == 'model_predictions2.policy':
+            option_text('Selected', 575, 625, black, select_panel= True)
 
         pygame.display.flip()
 
