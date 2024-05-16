@@ -20,6 +20,7 @@ model = models.model_from_json( loaded_model_json, custom_objects={"GlorotUnifor
 model.load_weights( "../NN/models/blackjackmodel.5.h5" )
 print( "Model loaded from disk" )
 
+
 NN_YES = True
 ai1_policy = None
 ai2_policy = None
