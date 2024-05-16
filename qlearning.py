@@ -15,43 +15,9 @@ class const():
     self.alpha = 0.01
     self.lambda_ = 0.1
 
-def update_q_lambda(Q_sa, N_sa, df_i, CONST):
-  '''
-  Note: not used in final implementation
-  '''
-  # Update visit count
-  N_sa[df_i.s][df_i.a] += 1
-# Temporal difference residue
-  diff = df_i.r + (CONST.gamma * max(Q_sa[df_i.sp])) - Q_sa[df_i.s][df_i.a]
-# Update action value function
-  Q_sa += (CONST.alpha * diff * N_sa)
-  # Decay visit count
-  N_sa *= CONST.gamma * CONST.lambda_
-  return
-
-def train_q_lambda(input_file, CONST):
-  '''
-  Note: not used in final implementation
-  '''
-  # Read in input datafile
-  df = pd.read_csv(input_file)
-  # Initialize action value function to all zeros
-  Q_sa = np.zeros((CONST.n_states, CONST.n_action))
-  # Initialize counter function
-  N_sa = np.zeros((CONST.n_states, CONST.n_action))
-  # Iterate through each sample in datafile
-  for i in range(len(df)):
-    df_i = df.loc[i]
-    update_q_lambda(Q_sa, N_sa, df_i, CONST)
-  # Policy is the index of the max value for each row in Q_sa
-  policy = np.argmax(Q_sa, axis=1)
-  # Write policy to file
-  write_outfile(policy, CONST)
-  return
-
 def update_q_learning(Q_sa, df_i, CONST):
   '''
-  Perform Q-Learning update to action value function for a single sample
+  Update Q-Learning action at each state
   '''
   # Temporal difference residue
   diff = df_i.r + (CONST.gamma * max(Q_sa[df_i.sp])) - Q_sa[df_i.s][df_i.a]
@@ -61,8 +27,7 @@ def update_q_learning(Q_sa, df_i, CONST):
 
 def train_q(input_file, CONST):
   '''
-  Train a policy using Q-learning algorithm and input datafile containing
-  sample data
+  Train a policy using the Q-learning algorithm
   '''
   # Read in input datafile
   df = pd.read_csv(input_file)
@@ -85,7 +50,7 @@ def train_q(input_file, CONST):
 
 def write_outfile(policy, CONST):
     '''
-    Write policy to a .policy output file
+    Write policy file
     '''
     # Get output file name and path
     output_dir = os.getcwd()

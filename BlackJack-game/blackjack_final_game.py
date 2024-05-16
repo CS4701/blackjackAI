@@ -1,5 +1,5 @@
 import pygame as pygame
-from blackjack_deck_moh import *
+from blackjack_deck import *
 from constants import *
 import sys
 import time
@@ -7,10 +7,7 @@ import os
 import tensorflow as tf
 from keras import models
 import matplotlib.pyplot as plt
-from itertools import product, combinations
-import pickle
 import numpy as np
-import random
 
 # Load Card Counting NN model
 json_file = open('../NN/models/blackjackmodel.5.json', 'r')
@@ -21,25 +18,22 @@ model.load_weights( "../NN/models/blackjackmodel.5.h5" )
 print( "Model loaded from disk" )
 
 NN_YES = True
-ai1_policy = None
-ai2_policy = None
-ai1_statemapping = 1
-ai2_statemapping = 2
-game_winners = [0, 0, 0, 0]
+ai1_policy = None # global variable for current AI player 1's policy
+ai2_policy = None # global variable for current AI player 2's policy
+ai1_statemapping = 1 # current AI player 1's state mapping
+ai2_statemapping = 2 # current AI player 2's state mapping
+game_winners = [0, 0, 0, 0] # current number of wins for each player: [dealer, user, AI 1, AI 2]
 total_games = [0,0,0,0]
-run_count = 0
+run_count = 0 
 
 pygame.init()
-
 clock = pygame.time.Clock()
-
 gameDisplay = pygame.display.set_mode((display_width, display_height))
+pygame.display.set_caption('BlackJack')
 CARD_WIDTH = pygame.image.load('img/2C.png').convert().get_width()*2/3  
 CARD_HEIGHT = pygame.image.load('img/2C.png').convert().get_height()*2/3  
-CARD_SPACING = 20 
-pygame.display.set_caption('BlackJack')
+CARD_SPACING = 20
 gameDisplay.fill(background_color)
-# pygame.draw.rect(gameDisplay, grey, pygame.Rect(0, 0, 250, 700))
 
 ###text object render
 def text_objects(text, font):
@@ -51,7 +45,6 @@ def end_text_objects(text, font, color):
     font = pygame.font.Font(None, 32)
     textSurface = font.render(text, True, color)
     return textSurface, textSurface.get_rect()
-
 
 #game text display
 def game_texts(text, x, y, ai=False):
@@ -122,10 +115,6 @@ def card_to_index(card_value, suit):
     index = (card_value - 1) * 4 + suit -1
     return index + 2
 
- 
-    
-    
-
 class Params():
     def __init__(self, action_type = "random_policy", filename =  None, state_mapping = 1):
     # 'input', 'random_policy', 'fixed_policy'
@@ -159,15 +148,10 @@ class Play:
         self.turn = 1
         self.deck.shuffle()
         self.params = params
-
-
-
-
         self.AI_1_HAND = [0]*54 #for Card Counting NN input
         self.AI_2_HAND = [0]*54
         # self.AI_3_HAND = [0]*54
         self.NUM_ROUNDS = 1
-
 
         if params:
             for i, param in enumerate(params):
@@ -178,40 +162,32 @@ class Play:
 
                         self.player2.policy = self.load_policy(self.player2)
                         self.players.append(self.player2)
-                        
-                
-
                     elif i == 1:
                         self.player3 = Hand("AI 2", NN = False, params=param)
-
                         self.player3.policy = self.load_policy(self.player3)
                         self.players.append(self.player3)
-
                 elif param is None:
                     if i == 0:
                         self.player2 = Hand("AI 1", NN = True, params=None)
                         self.players.append(self.player2)
-                
-
                     elif i == 1:
                         self.player3 = Hand("AI 2", NN = True, params=None)
                         self.players.append(self.player3)
-
-
                 else:
                     print("No file path")
 
-
+    # Clearing area of screen for redrawing
     def clear_card_areas(self, start_x, start_y, width):
         gameDisplay.fill(background_color, rect=[start_x, start_y, width, CARD_HEIGHT])
         pygame.display.update()
-
+    
+    # Drawing card images onto the game with dynamic changes in location
     def draw_cards(self, card_images, player, show_dealer=False):
             num_cards = len(card_images)
             start_x = 0
             start_y = 0
             total_width = num_cards * CARD_WIDTH + (num_cards - 1) * CARD_SPACING
-            if player == 0 or player == 2:
+            if player == 0 or player == 2: # dealer or user i.e. top and bottom
                 start_x = (display_width - total_width) / 2  # Start so that cards are centered
                 if player == 0:
                     start_y = 80
@@ -220,7 +196,7 @@ class Play:
                     start_y = 500
 
                 self.clear_card_areas(start_x, start_y, total_width)
-            elif player == 1 or player == 3:
+            elif player == 1 or player == 3: # AI 1 or AI 2 i.e. left or right
                 start_y = (display_height)/2
                 if player == 1:
                     start_x = display_width/4 - total_width/2
@@ -229,7 +205,7 @@ class Play:
                 self.clear_card_areas(start_x, start_y, total_width)
 
 
-            if player == 0 and show_dealer == False:
+            if player == 0 and show_dealer == False: # if dealer's card is not shown yet
                 for i in range(len(card_images)):
                         card_image = pygame.image.load('img/' + card_images[i] + '.png').convert()
                         card_image = pygame.transform.scale(card_image, (CARD_WIDTH, CARD_HEIGHT))
@@ -244,8 +220,6 @@ class Play:
                         gameDisplay.blit(card_image, (start_x + i * (CARD_WIDTH + CARD_SPACING), start_y))
             pygame.display.update()
 
-        
-
     def run_count_update(self, card):
         global run_count
         if card[0] in 'JQKA':
@@ -255,8 +229,6 @@ class Play:
 
 
     def blackjack(self): #determine winners
-        # self.dealer.value = 0
-        # self.dealer.calc_hand()
         global game_winners
         for player in self.players:
             player.value = 0
@@ -271,11 +243,7 @@ class Play:
             return
         
         self.dealer.display_cards()
-        # show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
-        # gameDisplay.blit(show_dealer_card, (550, 200))
         self.draw_cards(self.dealer.card_img, 0, True)
-
-        
 
         if len(winners) > 1 and self.dealer in winners:
             names_with_blackjack = " and ".join([winner.name for winner in winners])
@@ -295,10 +263,6 @@ class Play:
 
         elif len(winners) > 1:
             winner_names = " and ".join([winner.name for winner in winners])
-
-            # for w in winners:
-            #     w.wins +=1
-            #     print(f'{w.name} got BlackJack!')
             black_jack( f'{winner_names} got BlackJack!', display_width/2, 250, green)
             for winner in winners:
                 if winner == self.dealer:
@@ -329,7 +293,6 @@ class Play:
         
         time.sleep(4)
         self.play_or_exit()  
-        
     
     # Load policy from input .policy file into self.policy
     def load_policy(self, player):
@@ -343,31 +306,17 @@ class Play:
         policy = [int(x) for x in data]
         return policy
     
-        # testing if policy failed v
-        # if hasattr(player, 'fixed_policy_filepath') and player.fixed_policy_filepath:
-        #     with open(player.fixed_policy_filepath, 'r') as f:
-        #         policy_data = f.read()
-        #     # Load the policy from the data here
-        #     return policy_data
-        # else:
-        #     raise ValueError("Policy file path not set for the player.")
-    
     def hand_to_state(self, player):
         global run_count
-        # print(player.state_mapping)
         for p in self.players:
             p.value = 0
 
         for p in self.players:
             p.calc_hand()
         
-        # print(player.state_mapping)
-
         if player.state_mapping == 1:
-            # print(f'state_mapping_1 {player.value}')
             return player.value - 1
         elif player.state_mapping == 2:
-            # print(f'state_mapping_2 {player.value}')
             return (player.value- 1) + (18 * (self.dealer.get_dealer_card() - 1))
         elif player.state_mapping == 3:
             if player.useable_ace() and len(player.cards) <= 2:
@@ -383,10 +332,7 @@ class Play:
            return
         if player.NN == False:
             if (player is self.player2) or (player is self.player3):
-                # print(player.name)
-                # print(player.state_mapping)
                 state = self.hand_to_state(player)
-                # print(f"state: {state}")
                 action = player.policy[state]
 
                 if action: # hit: add a card to players hand and return
@@ -418,10 +364,7 @@ class Play:
             else:
                 print('There is a bug my friend')
 
-
-
-
-
+    # dealing cards
     def deal(self):
         global total_games
         print('===========================================')
@@ -452,14 +395,9 @@ class Play:
 
         self.AI_1_HAND[1] = self.dealer.value
         self.AI_2_HAND[1] = self.dealer.value
-        
-            
-
+    
         print("AI 1's cards are:", self.player2.cards)
         print("AI 2's cards are:", self.player3.cards)
-        # print("AI 3's cards are:", self.player4.cards)
-        # print(self.AI_3_HAND)
-
 
         self.dealer.display_cards()
         self.player1.display_cards()
@@ -467,33 +405,18 @@ class Play:
         self.player3.display_cards()
         self.player_card = 1
 
-        # dealer_card = pygame.image.load('img/' + self.dealer.card_img[0] + '.png').convert()
-        # dealer_card_2 = pygame.image.load('img/back.png').convert()
-            
-        # player_card = pygame.image.load('img/' + self.player1.card_img[0] + '.png').convert()
-        # player_card_2 = pygame.image.load('img/' + self.player1.card_img[1] + '.png').convert()
-
-        
         game_texts("Dealer's hand is:", display_width/2, 55)
         game_texts("AI 1's hand is:", display_width/4, display_height/2-25)
         game_texts("AI 2's hand is:", 3*display_width/4, display_height/2-25)
 
-        # gameDisplay.blit(dealer_card, (400, 200))
-        # gameDisplay.blit(dealer_card_2, (550, 200))
         self.draw_cards(self.dealer.card_img, 0)
 
 
         game_texts("Your's hand is:", display_width/2, 475)
-        
-        # gameDisplay.blit(player_card, (300, 450))
-        # gameDisplay.blit(player_card_2, (410, 450))
 
-        # pygame.display.update()
         self.draw_cards(self.player1.card_img, 2)
-
         self.draw_cards(self.player2.card_img, 1)
         self.draw_cards(self.player3.card_img, 3)
-
 
         time.sleep(1)
         self.blackjack()
@@ -510,9 +433,7 @@ class Play:
             index = card_to_index(card_value, suit)
             self.AI_1_HAND[index] = 1
             self.AI_2_HAND[index] = 1
-            # self.AI_3_HAND[index] = 1
-
-        # self.blackjack(player)
+  
         player.value = 0
         if player == self.player1:
             self.player_card += 1
@@ -522,11 +443,7 @@ class Play:
 
                 self.AI_1_HAND[0] = self.player1.value
                 self.AI_2_HAND[0] = self.player1.value
-                # self.AI_3_HAND[0] = self.player1.value
-
                 player.display_cards()
-                # player_card_3 = pygame.image.load('img/' + self.player1.card_img[2] + '.png').convert()
-                # gameDisplay.blit(player_card_3, (520, 450))
                 self.draw_cards(self.player1.card_img, 2)
 
 
@@ -535,11 +452,8 @@ class Play:
 
                 self.AI_1_HAND[0] = self.player1.value
                 self.AI_2_HAND[0] = self.player1.value
-                # self.AI_3_HAND[0] = self.player1.value
 
                 player.display_cards()
-                # player_card_4 = pygame.image.load('img/' + self.player1.card_img[3] + '.png').convert()
-                # gameDisplay.blit(player_card_4, (630, 450))
                 self.draw_cards(self.player1.card_img, 2)
 
             
@@ -548,11 +462,8 @@ class Play:
 
                 self.AI_1_HAND[0] = self.player1.value
                 self.AI_2_HAND[0] = self.player1.value
-                # self.AI_3_HAND[0] = self.player1.value
 
                 player.display_cards()
-                # player_card_5 = pygame.image.load('img/' + self.player1.card_img[4] + '.png').convert()
-                # gameDisplay.blit(player_card_5, (740, 450))
                 self.draw_cards(self.player1.card_img, 2)
 
             pygame.display.update()
@@ -568,9 +479,7 @@ class Play:
 
 
             self.AI_1_HAND[0] = self.player1.value
-            self.AI_2_HAND[0] = self.player1.value
-            # self.AI_3_HAND[0] = self.player1.value
-            
+            self.AI_2_HAND[0] = self.player1.value            
             print(player.name, "cards:", player.cards)
             time.sleep(1)
             
@@ -598,18 +507,12 @@ class Play:
         self.dealer.value = 0
         self.dealer.calc_hand()
 
-        # show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
-        # gameDisplay.blit(show_dealer_card, (550, 200))
-
         while (self.dealer.value < 16):
             print("dealer hitting")
             self.dealer.add_card(self.deck.deal())
             self.run_count_update(self.dealer.cards[-1])
             print("dealer cards", self.dealer.cards)
             self.dealer.display_cards()
-            # print("dealer cards", self.dealer.card_img)
-            # last_dealer_card = pygame.image.load('img/' + self.dealer.card_img[-1] + '.png').convert()
-            # gameDisplay.blit(last_dealer_card, (550 + 110 * (len(self.dealer.cards) - 2), 200))
             self.dealer.value = 0
             self.dealer.calc_hand()
 
@@ -628,8 +531,6 @@ class Play:
         
     def check_winner(self):
         global game_winners
-        # show_dealer_card = pygame.image.load('img/' + self.dealer.card_img[1] + '.png').convert()
-        # gameDisplay.blit(show_dealer_card, (550, 200))
         self.draw_cards(self.dealer.card_img, 0, True)
         print("My cards are:", self.player1.cards)
         print("Dealer cards are:", self.dealer.cards)
@@ -656,15 +557,9 @@ class Play:
             winners = [player for player in self.players if player.value >= dealer_score and not player.busted]
         else: #tie game without dealer
             winners = [player for player in self.players if player.value > dealer_score and not player.busted]
-
-
-        # highest_score = max([player.value for player in self.players if not player.busted], default=0)
-        # winners = [player for player in self.players if player.value == highest_score and not player.busted]
-        print()
         if len(winners) == 1:
             winner = winners[0]
             print(f'{winner.name} Won!')
-            # winner.wins += 1
             if winner == self.dealer:
                 game_winners[0] += 1
             elif winner == self.player1:
@@ -675,14 +570,11 @@ class Play:
                 game_winners[3] += 1
             else:
                 print("no such player")
-            game_finish(f'{winner.name} Wins!', 500, 250, green)
+            game_finish(f'{winner.name} Wins!', display_width/2, 250, green)
        
         elif self.dealer not in winners:
             winner_names = " and ".join([winner.name for winner in winners])
-            game_finish(f'{winner_names} Win!', 500, 250, green)
-
-            # for w in winners:
-            #     w.wins+=1
+            game_finish(f'{winner_names} Win!', display_width/2, 250, green)
             for winner in winners:
                 if winner == self.dealer:
                     game_winners[0] += 1
@@ -698,7 +590,7 @@ class Play:
         else:
             winner_names = " and ".join([winner.name for winner in winners])
             print(f'It\'s a Tie! {winner_names} Won!')
-            game_finish(f'It\'s a Tie! {winner_names} Won!', 500, 250, grey)
+            game_finish(f'It\'s a Tie! {winner_names} Won!', display_width/2, 250, grey)
             for winner in winners:
                 if winner == self.dealer:
                     game_winners[0] += 1
@@ -728,7 +620,6 @@ class Play:
             self.AI_1_HAND = [0]*54 
             self.AI_2_HAND = [0]*54
             run_count = 0
-            # self.AI_3_HAND = [0]*54
         self.NUM_ROUNDS +=1
 
         game_texts("Play again press Deal!", 200, 80)
@@ -740,20 +631,14 @@ class Play:
 
         for player in self.players:
             player.reset()
-            # print(player.name, "wins:", player.wins)
         print()
         self.deck.shuffle()
         gameDisplay.fill(background_color)
-        # pygame.draw.rect(gameDisplay, grey, pygame.Rect(0, 0, 250, 700))
         pygame.display.update()
-    
-    
 
-
-
+# main game loop
 def game():
     global ai1_policy, ai2_policy, ai1_statemapping, ai2_statemapping
-    # print(f"{ai1_statemapping}    {ai2_statemapping}")
     if ai1_policy is None and ai2_policy is None:
         ai1_policy = 'QLearning_policy_mapping_1.policy'
         ai2_policy = "QLearning_policy_mapping_2.policy"
@@ -782,10 +667,7 @@ def game():
             button("Stand", 770, 600, 120, 40, light_slat, dark_slat, play_blackjack.stand, play_blackjack.game_active)
             button("EXIT", 770, 650, 120, 40, light_slat, dark_red, play_blackjack.exit)
             button("win rates", 30, 600, 120, 40, light_slat, dark_slat, show_winrate_screen, not play_blackjack.game_active, [play_blackjack])
-
-            button("Change", 30, 650, 120, 40, light_slat, dark_slat, show_policy_selection_screen, not play_blackjack.game_active)
-
-
+            button("Change Policies", 30, 650, 120, 40, light_slat, dark_slat, show_policy_selection_screen, not play_blackjack.game_active)
 
             if play_blackjack.turn == 2:
                 play_blackjack.policy_run(play_blackjack.player2)
@@ -808,7 +690,7 @@ def game():
         
         pygame.display.flip()
 
-
+# rendering option text objects
 def option_text(text, x, y, color, select_panel= False):
     TextSurf, TextRect = end_text_objects(text, blackjack, color)
     TextRect.center = (x, y)
@@ -842,7 +724,7 @@ def option_text(text, x, y, color, select_panel= False):
         pygame.draw.rect(gameDisplay, background_color , TextRect)
 
 
-
+# helper function to update the global variables of AI policies and state mappingg
 def set_policy(ai, policy_name, statemapping = None ):
     global ai1_policy, ai2_policy, ai1_statemapping, ai2_statemapping, game_winners
     if ai == 'AI1':
@@ -850,21 +732,16 @@ def set_policy(ai, policy_name, statemapping = None ):
         game_winners[2]= 0
         ai1_policy = policy_name
         ai1_statemapping = statemapping
-        # print(f"state mapping for AI 1: {statemapping}")
     elif ai == 'AI2':
         total_games[3]=0
         game_winners[3]=0
         ai2_policy = policy_name
         ai2_statemapping = statemapping
-        # print(f"state mapping for AI 2: {statemapping}")
 
     gameDisplay.fill(background_color, rect=[225, 200, 500, 50])
     pygame.display.update()
-    # game_winners = [0,0,0,0]
-    # print(f"{ai} policy set to {policy_name}")
-    # print(f"{ai} statemapping set to {statemapping}")
 
-
+# policy selection screen loop
 def show_policy_selection_screen():
     running = True
     gameDisplay.fill(background_color)
@@ -918,20 +795,16 @@ def show_policy_selection_screen():
 
         pygame.display.flip()
 
-
+# win rate screen loop
 def show_winrate_screen(game_state):
     global game_winners, total_games
-
     running = True
     gameDisplay.fill(background_color)
     option_text(f"AI 1's win rate: {game_winners[2]}/{total_games[2]}", 150, 100, black)
     option_text(f"AI 2's win rate: {game_winners[3]}/{total_games[3]}", 150, 200, black)
     option_text(f"Dealer's win rate: {game_winners[0]}/{total_games[0]}", 150, 300, black)
     option_text(f"Your win rate: {game_winners[1]}/{total_games[1]}", 150, 400, black)
-    # option_text(f"AI 1's win: {game_state.player2.wins}", 150, 100, black)
-    # option_text(f"AI 2's win: {game_state.player3.wins}", 150, 200, black)
-    # option_text(f"Dealer's win: {game_state.dealer.wins}", 150, 300, black)
-    # option_text(f"Your win: {game_state.player1.wins}", 150, 400, black)
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -939,6 +812,4 @@ def show_winrate_screen(game_state):
         button("back", 770, 650, 120, 40, light_slat, dark_slat, game, True)
 
         pygame.display.flip()
-
-
 game()

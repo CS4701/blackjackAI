@@ -3,6 +3,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import numpy as np
+import torch.nn.functional as F
+from torch.utils.data import TensorDataset, DataLoader
+from torch.optim import optimizer
 
 class BlackjackNNWithCount(nn.Module):
     def init(self):
@@ -33,18 +37,6 @@ for epoch in range(num_epochs):
 
     print(f'Epoch {epoch+1}, Loss: {loss.item()}')
 
-
-
-
-
-
-import gym
-import torch.nn as nn
-import torch
-import numpy as np
-import torch.nn.functional as F
-from torch.utils.data import TensorDataset, DataLoader
-from torch.optim import optimizer
 
 def train(learner, observations, actions, num_epochs=100):
     """Train function for learning a new policy using BC.
@@ -82,11 +74,6 @@ def train(learner, observations, actions, num_epochs=100):
         print(f"Epoch {epoch + 1}, Loss: {total_loss / len(dataloader)}")
     
     return learner
-
-
-
-import torch
-import torch.nn as nn
 
 def get_checkpoint_path():
     """Return the path to save the best performing model checkpoint.
@@ -149,7 +136,6 @@ def train(x, y, model, loss_fn, optimizer, checkpoint_path, num_epochs=1000):
     Side Effects:
         - Save the best performing model checkpoint to `checkpoint_path`
     """
-    # TODO: Implement
     best_loss = float('inf')
 
     for epoch in range(num_epochs):
@@ -158,7 +144,6 @@ def train(x, y, model, loss_fn, optimizer, checkpoint_path, num_epochs=1000):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        # print(loss)
         if loss < best_loss:
             best_loss = loss
             torch.save(model.state_dict(), checkpoint_path)
@@ -175,7 +160,6 @@ def load_model_checkpoint(checkpoint_path):
         model (torch.nn.Module)
             The model loaded from the checkpoint
     """
-    # TODO: Implement
     model = LinearRegression()
     model.load_state_dict(torch.load(checkpoint_path))
     return model

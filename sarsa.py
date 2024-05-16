@@ -2,9 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 
-#~~~~~~~~~~~~~~~~~
 state_mapping = 2
-#~~~~~~~~~~~~~~~~~
 
 if state_mapping == 1:
   S = 21

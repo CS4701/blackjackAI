@@ -21,13 +21,14 @@ class Deck:
             return self.cards.pop()
             
 class Hand(Deck):
-    def __init__(self, name="User", wins = 0, params = None, policy = None):
+    def __init__(self, name="User", NN = False, wins = 0, params = None, policy = None):
         self.cards = []
         self.card_img = []
         self.value = 0 
         self.name = name
         self.busted = False
         self.wins = wins
+        self.NN = NN
         if params:
             self.action_type = params.action_type
             self.fixed_policy_filepath = params.fixed_policy_filepath

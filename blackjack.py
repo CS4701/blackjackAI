@@ -90,18 +90,15 @@ class BlackJack_game():
     # State, Action, Reward, Next State arrays
     self.sarsp = []
     self.sarsp_arr = np.array([], dtype='int').reshape(0,4)
-    # Various other parameters
     self.action_type = params.action_type # 'input', 'random_policy', 'fixed_policy'
     self.verbose = (params.action_type == 'input')
     self.num_games = params.num_games
     self.fixed_policy_filepath = params.fixed_policy_filepath
     self.policy = self.load_policy()
     self.state_mapping = params.state_mapping
-    # Probably do not need to change these
     self.lose_state = 0
     self.win_state = 1
     self.terminal_state = 2
-    # Also do not need to change these
     self.lose_reward = -10
     self.win_reward = 10
     self.run_count = 0
@@ -122,25 +119,26 @@ class BlackJack_game():
     return self.deck.pop()
     # Draws random hand (2 random cards from deck)
 
-
+  # Draws a hand (2 cards)
   def draw_hand(self):
     return [self.draw_card(), self.draw_card()]
     
-  # Does this hand have a usable ace?
+  # If hand contains an Ace
   def usable_ace(self, hand):
     return 1 in hand and sum(hand) + 10 <= 21
 
-# Return current hand total 
+# Current hand total 
   def sum_hand(self, hand):
     if self.usable_ace(hand):
       return sum(hand) + 10
     return sum(hand)
 
-# Is this hand a bust?
+# Check if hand is busted
   def is_bust(self, hand):
     return self.sum_hand(hand) > 21
 
-# What is the score of this hand (0 if bust)
+# Score of hand 
+# 0 if hand is busted
   def score(self, hand):
     return 0 if self.is_bust(hand) else self.sum_hand(hand)
 
@@ -155,7 +153,7 @@ class BlackJack_game():
     else:
       return False
     
-  #card counting state helper function
+  #QLCC state mapping (4) helper function
   def encode_state(self, player_hand, dealer_up, run_count):
     # Encode the state as a unique integer
 
@@ -196,7 +194,7 @@ class BlackJack_game():
 
 # Get reward based off of current state and action (may get rid of this
 # function, not really being used at the moment)
-  def get_reward(self, state, action, player, dealer):
+  def get_reward(self, action, player, dealer):
     if self.state_mapping == 1:
       return 0
     else:
@@ -239,7 +237,7 @@ class BlackJack_game():
       action = self.policy[state]
     return action
 
-# Play a single game of BlackJack!
+# Play BlackJack!
   def play_game(self):
   # Only for 'input' mode
     if self.verbose:
