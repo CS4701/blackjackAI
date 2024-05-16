@@ -200,11 +200,12 @@ def hand( montecarlo, level, debug ):
 ####################################
 # function for testing an AI model #
 ####################################
-# takes as input a model name string, a number of games to preform,
-# a boolean where True implies we use a fresh deck for each hand,
-# an integer representing which level we should be testing at,
-# and a boolean for debugging/verbosity
-# prints win/loss ratio
+"""
+takes as input a model name string, a number of games to preform, 
+a boolean where True implies we use a fresh deck for each hand,
+an integer representing which level we should be testing at,
+and a boolean for debugging/verbosity then prints win/loss ratio
+"""
 def test_model( model_name, num_of_tests, fresh_deck, level, debug ):
 
 	# statistics
@@ -212,7 +213,6 @@ def test_model( model_name, num_of_tests, fresh_deck, level, debug ):
 	losses = 0
 	ties = 0
 
-	# deserialize model
 	json_file = open('models/'+model_name+'.json', 'r')
 	loaded_model_json = json_file.read()
 	json_file.close()
@@ -220,13 +220,10 @@ def test_model( model_name, num_of_tests, fresh_deck, level, debug ):
 	model.load_weights( "models/"+model_name+".h5" )
 	print( "Model " + model_name + " loaded from disk" )
 
-	# get deck ready
 	deck = Deck()
 
-	# random choices
 	choices = [ 'h', 's' ]
 
-	# loop through the number of tests parameter
 	for i in range( num_of_tests ):
 		if (i+1) % 100 == 0:
 			print(f"Testing model, progress: {i+1}/{num_of_tests} ")
@@ -291,15 +288,12 @@ def test_model( model_name, num_of_tests, fresh_deck, level, debug ):
 			else:
 				choice = "h"
 
-			# temp code to generate random choice
 #			choice = rand.choice( [ 'h', 's' ] )
 #			choice = "s"
 
 			#print( i, choice )
 
-			# if hitting
 			if choice == "h":
-
 				# hit
 				players_hand = players_hand + [ deck.deal() ]
 				summ = hand_value( players_hand )
@@ -311,23 +305,19 @@ def test_model( model_name, num_of_tests, fresh_deck, level, debug ):
 					print( "Dealer: " + dealers_hand[0] + "   " + "x-x")
 					print( "Player: " + players_hand_str )
 				if summ > 21:
-					# add tag
 					if debug:
 						print( "Bust." )
 						print( "PLAYER LOSES" )
 					losses = losses + 1
 					continue
 				elif summ == 21:
-					# add tag
 					if debug:
 						print( "21" )
 					wins = wins + 1
 					continue
 				else:
-					# add tag
 					players_summ = summ
 
-			# if staying
 			else:
 				# add data
 				if level == 1:
@@ -338,11 +328,9 @@ def test_model( model_name, num_of_tests, fresh_deck, level, debug ):
 					data += [[hand_value( players_hand ), int( dealers_hand[0][:dealers_hand[0].index('-')])] + deck.negation()]
 				if debug:
 					print( "Staying" )
-					# print current game
 					players_hand_str = ""
 					for card in players_hand:
 						players_hand_str = players_hand_str + card + "   "	
-				# check if dealer needs card
 				while hand_value( dealers_hand ) < 17:
 					dealers_hand = dealers_hand + [ deck.deal() ]
 					if debug:
@@ -424,7 +412,3 @@ def gen_data_set( num_of_games, name, level, shuffle = True):
 		except Exception as e:
 			print( e )
 			deck.shuffle()
-
-
-
-#Problem with blackjack data 3 is that the deck is not reshuffled so the model is too optimistic/biased (overfitting)

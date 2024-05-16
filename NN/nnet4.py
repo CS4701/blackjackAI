@@ -1,22 +1,13 @@
 from __future__ import absolute_import, division, print_function
-
-# tf and keras
 import tensorflow as tf
-#from tensorflow import keras
 import keras
-#from keras.models import model_from_json
-
-# helper libs
 import numpy as np
 import matplotlib.pyplot as plt
 import blackjack as bj
 
-# introduction
 print( "TensorFlow Version: " + tf.__version__ )
 
 
-# this line added to avoid accidental overwriting of data_sets and models
-#exit()
 
 def filter_lines(data, tag, threshold = 54 - 20):
 	filtered_data = []
@@ -120,55 +111,6 @@ with open( "models/blackjackmodel.4.json", "w") as json_file:
 model.save_weights("models/blackjackmodel.4.h5")
 print( "Model saved" )
 
-
-# # open serialized model
-# # taken from https://machinelearningmastery.com/save-load-keras-deep-learning-models/
-# json_file = open('models/blackjackmodel.2.json', 'r')
-# loaded_model_json = json_file.read()
-# json_file.close()
-# model = keras.models.model_from_json( loaded_model_json, custom_objects={"GlorotUniform": tf.keras.initializers.glorot_uniform} )
-# model.load_weights( "models/blackjackmodel.2.h5" )
-# print( "Model loaded from disk" )
-
-
-# print( "testing model" )
-
-# for i in range(21):
-# 	prediction = model.predict( np.array([ [i,10] ]) )
-# 	if prediction[0][0] > prediction[0][1]:
-# 		print( str(i) + " stay" )
-# 	else:
-# 		print( str(i) + " hit" )
-
-
-# results = []
-
-# for i in range(0,17):
-# 	results = results + [ "" ]
-# 	for j in range(0,9):
-# 		prediction = model.predict( np.array([ [i+5,j+2] ] ) )
-# 		if prediction[0][0] > prediction[0][1]:
-# 			results[i] = results[i] + "s"
-# 		else:
-# 			results[i] = results[i] + "h"
-
-# print( "  ", end="" )
-
-# for x in range( len(results[0]) ):
-# 	print( " " + str( (x+4)%10 ), end="" )
-# print( )
-# for i in range( len(results) ):
-# 	print( i+5, end="" )
-# 	if i+5 < 10:
-# 		print( "  ", end="" )
-# 	else:
-# 		print( " ", end="" )
-# 	for j in range( len(results[i] ) ):
-# 		print( results[i][j], end=" " )
-# 	print( )
-
-
-# test_loss, test_acc = model.evaluate(test_data, test_tags)
 
 print('Test accuracy: \n', test_acc)
 

@@ -1,21 +1,9 @@
 from __future__ import absolute_import, division, print_function
-
-# tf and keras
 import tensorflow as tf
-#from tensorflow import keras
 import keras
-#from keras.models import model_from_json
-
-# helper libs
 import numpy as np
 import matplotlib.pyplot as plt
 import blackjack as bj
-
-# introduction
-print( "TensorFlow Version: " + tf.__version__ )
-
-# this line added to avoid accidental overwriting of data_sets and models
-#exit()
 
 
 # get the data set
@@ -54,16 +42,12 @@ test_data = np.array( data_clean[size:] )
 test_tags = np.array( tags_clean[size:] )
 
 model = keras.Sequential([
-    keras.layers.Dense(54, input_shape=(54,)),  # Adjust the input_shape according to your data's feature count
+    keras.layers.Dense(54, input_shape=(54,)), 
     keras.layers.Dense(64, activation='relu'),
     keras.layers.Dense(128, activation='relu'),
     keras.layers.Dense(2, activation='softmax')
 ])
-# model = keras.Sequential()
-# model.add( keras.layers.Dense( 54, input_dim=54 ) )
-# model.add( keras.layers.Dense( 64, input_dim=26 ) )
-# model.add( keras.layers.Dense( 128, input_dim=13 ) )
-# model.add( keras.layers.Dense(2, activation=tf.nn.softmax) )
+
 
 model.compile(optimizer='adam',
 	loss='sparse_categorical_crossentropy',

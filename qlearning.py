@@ -2,122 +2,56 @@ import os
 import pandas as pd
 import numpy as np
 import time
-class const():
-  '''
-  Class that contains various constants/parameters for the current problem
-  '''
-  def __init__(self):
-    self.gamma = 0.5
-    self.input_filename = 'random_policy_runs_mapping_1.csv'
-    self.output_filename = 'QLearning_policy_mapping_1.policy'
-    self.n_states = 21 # 21 for state mapping 1, 183 for state mapping 2
-    self.n_action = 2
-    self.alpha = 0.01
-    self.lambda_ = 0.1
 
-def update_q_lambda(Q_sa, N_sa, df_i, CONST):
-  '''
-  Note: not used in final implementation
-  '''
-  # Update visit count
-  N_sa[df_i.s][df_i.a] += 1
-# Temporal difference residue
-  diff = df_i.r + (CONST.gamma * max(Q_sa[df_i.sp])) - Q_sa[df_i.s][df_i.a]
-# Update action value function
-  Q_sa += (CONST.alpha * diff * N_sa)
-  # Decay visit count
-  N_sa *= CONST.gamma * CONST.lambda_
-  return
+class QLearningConstants:
+    """Class that contains various constants/parameters for the Q-learning problem."""
+    def __init__(self, state_mapping):
+        self.gamma = 0.5
+        self.alpha = 0.01
+        self.lambda_ = 0.1
+        if state_mapping == 1:
+            self.n_states = 21
+            self.input_filename = 'random_policy_runs_mapping_1.csv'
+            self.output_filename = 'QLearning_policy_mapping_1.policy'
+        elif state_mapping == 2:
+            self.n_states = 183
+            self.input_filename = 'random_policy_runs_mapping_2.csv'
+            self.output_filename = 'QLearning_policy_mapping_2.policy'
+        self.n_action = 2
 
-def train_q_lambda(input_file, CONST):
-  '''
-  Note: not used in final implementation
-  '''
-  # Read in input datafile
-  df = pd.read_csv(input_file)
-  # Initialize action value function to all zeros
-  Q_sa = np.zeros((CONST.n_states, CONST.n_action))
-  # Initialize counter function
-  N_sa = np.zeros((CONST.n_states, CONST.n_action))
-  # Iterate through each sample in datafile
-  for i in range(len(df)):
-    df_i = df.loc[i]
-    update_q_lambda(Q_sa, N_sa, df_i, CONST)
-  # Policy is the index of the max value for each row in Q_sa
-  policy = np.argmax(Q_sa, axis=1)
-  # Write policy to file
-  write_outfile(policy, CONST)
-  return
+def update_q_learning(Q, s, a, r, sp, constants):
+    """Perform Q-Learning update to action value function for a single transition."""
+    max_next_q = np.max(Q[sp])
+    Q[s, a] += constants.alpha * (r + constants.gamma * max_next_q - Q[s, a])
 
-def update_q_learning(Q_sa, df_i, CONST):
-  '''
-  Perform Q-Learning update to action value function for a single sample
-  '''
-  # Temporal difference residue
-  diff = df_i.r + (CONST.gamma * max(Q_sa[df_i.sp])) - Q_sa[df_i.s][df_i.a]
-  # Update action value function
-  Q_sa[df_i.s][df_i.a] += CONST.alpha * diff
-  return
+def train_q(input_file, constants):
+    """Train a policy using the Q-learning algorithm and input datafile containing sample data."""
+    df = pd.read_csv(input_file)
+    Q = np.zeros((constants.n_states, constants.n_action))
+    for index, row in df.iterrows():
+        update_q_learning(Q, int(row['s']), int(row['a']), row['r'], int(row['sp']), constants)
+    return np.argmax(Q, axis=1)
 
-def train_q(input_file, CONST):
-  '''
-  Train a policy using Q-learning algorithm and input datafile containing
-  sample data
-  '''
-  # Read in input datafile
-  df = pd.read_csv(input_file)
-  
-  # Initialize action value function to all zeros
-  Q_sa = np.zeros((CONST.n_states, CONST.n_action))
-
-  # Iterate through each sample in datafile
-  for i in range(len(df)):
-    df_i = df.loc[i]
-    update_q_learning(Q_sa, df_i, CONST)
-
-  # Policy is the index of the max value for each row in Q_sa
-  policy = np.argmax(Q_sa, axis=1)
-
-  # Write policy to file
-  write_outfile(policy, CONST)
-
-  return
-
-def write_outfile(policy, CONST):
-    '''
-    Write policy to a .policy output file
-    '''
-    # Get output file name and path
+def write_outfile(policy, output_file):
+    """Write policy to a .policy output file."""
     output_dir = os.getcwd()
-    output_file = os.path.join(output_dir, f'{CONST.output_filename}')
-
-    # Open output file
-    df = open(output_file, 'w')
-    
-    # Iterate through each value in policy, writing to output file
-    for i in range(CONST.n_states):
-        df.write(f'{policy[i]}\n')
-        
-    # Close output file
-    df.close()
-    
-    return
+    output_path = os.path.join(output_dir, output_file)
+    with open(output_path, 'w') as file:
+        for p in policy:
+            file.write(f'{p}\n')
 
 def main():
-    start = time.time()
-    
-    CONST = const()
-    
-    input_file = os.path.join(os.getcwd(), CONST.input_filename)
+    start_time = time.time()
 
-    train_q(input_file, CONST)
-    #train_q_lambda(input_file, CONST)
+    # Set state mapping here (1 or 2)
+    state_mapping = 1
+    constants = QLearningConstants(state_mapping)
+    input_file = os.path.join(os.getcwd(), constants.input_filename)
+    policy = train_q(input_file, constants)
+    write_outfile(policy, constants.output_filename)
 
-    end = time.time()
+    end_time = time.time()
+    print(f'Total time: {end_time - start_time:.2f} seconds')
 
-    print(f'Total time: {end-start:0.2f} seconds')
-    print(f'Total time: {(end-start)/60:0.2f} minutes')
-    
-    return
 if __name__ == '__main__':
     main()

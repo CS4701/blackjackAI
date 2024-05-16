@@ -1,8 +1,11 @@
 import numpy as np
-
+import torch.optim as optim
 import torch
 import torch.nn as nn
-import torch.optim as optim
+import torch.nn.functional as F
+from torch.utils.data import TensorDataset, DataLoader
+from torch.optim import optimizer
+import os
 
 class BlackjackNNWithCount(nn.Module):
     def init(self):
@@ -17,9 +20,49 @@ class BlackjackNNWithCount(nn.Module):
         x = torch.sigmoid(self.fc3(x))
         return x
     
-model = BlackjackNN()
+model = BlackjackNNWithCount()
 criterion = nn.BCELoss()  # Binary Cross-Entropy Loss for binary classification
 optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+num_epochs = 1000
+
+# get the data set
+data = open( "data_sets/blackjack.data.3").readlines()
+tags = open( "data_sets/blackjack.tags.3").readlines()
+data_clean = []
+tags_clean = []
+#strip whitespace
+first = True
+for datum in data:
+	if first:
+		first = False
+		continue
+	clean_datum = datum[1:datum.index('\n')-1].strip().split(', ')
+	clean_datum[0] = int( clean_datum[0] )
+	clean_datum[1] = int( clean_datum[1] )
+	print( clean_datum )
+	data_clean = data_clean + [ clean_datum ]
+
+first = True
+for tag in tags:
+	if first:
+		first = False
+		continue
+	tag = tag[:tag.index('\n')]
+	if tag == "h":
+		tags_clean = tags_clean + [ 1.0 ]
+	else:
+		tags_clean = tags_clean + [ 0.0 ]
+
+size = int( len(data)*(0.75) )
+
+train_data = np.array( data_clean[1:size] )
+train_tags = np.array( tags_clean[1:size] )
+test_data = np.array( data_clean[size:] )
+test_tags = np.array( tags_clean[size:] )
+
+
+data_loader = train_data
 
 for epoch in range(num_epochs):
     for game_states, decisions in data_loader:
@@ -28,23 +71,11 @@ for epoch in range(num_epochs):
         loss = criterion(outputs, decisions)
         loss.backward()
         optimizer.step()
-        print(f"Epoch {epoch + 1}, Loss: {total_loss / len(dataloader)}")
+        print(f"Epoch {epoch + 1}, Loss: {loss / len(data_loader)}")
 
 
     print(f'Epoch {epoch+1}, Loss: {loss.item()}')
 
-
-
-
-
-
-import gym
-import torch.nn as nn
-import torch
-import numpy as np
-import torch.nn.functional as F
-from torch.utils.data import TensorDataset, DataLoader
-from torch.optim import optimizer
 
 def train(learner, observations, actions, num_epochs=100):
     """Train function for learning a new policy using BC.
@@ -84,10 +115,6 @@ def train(learner, observations, actions, num_epochs=100):
     return learner
 
 
-
-import torch
-import torch.nn as nn
-
 def get_checkpoint_path():
     """Return the path to save the best performing model checkpoint.
     
@@ -121,7 +148,6 @@ def create_loss_and_optimizer(model):
         optimizer (torch.optim.Optimizer)
             The optimizer for the model
     """
-    # TODO: Implement
     lr=0.05
     loss_fn = nn.MSELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr)
@@ -149,7 +175,6 @@ def train(x, y, model, loss_fn, optimizer, checkpoint_path, num_epochs=1000):
     Side Effects:
         - Save the best performing model checkpoint to `checkpoint_path`
     """
-    # TODO: Implement
     best_loss = float('inf')
 
     for epoch in range(num_epochs):
@@ -175,7 +200,6 @@ def load_model_checkpoint(checkpoint_path):
         model (torch.nn.Module)
             The model loaded from the checkpoint
     """
-    # TODO: Implement
     model = LinearRegression()
     model.load_state_dict(torch.load(checkpoint_path))
     return model

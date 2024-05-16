@@ -1,16 +1,9 @@
 from __future__ import absolute_import, division, print_function
-
-# tf and keras
 import tensorflow as tf
-#from tensorflow import keras
 import keras
-#from keras.models import model_from_json
-
-# helper libs
 import numpy as np
 import matplotlib.pyplot as plt
-
-import Blackjack as bj
+import blackjack as bj
 
 #data set will now include the dealer's upward facing card.
 #So where previously we used the single integer for data, we will now use a tuple of players_hand, and dealers_hand respectively.

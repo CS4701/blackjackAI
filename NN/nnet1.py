@@ -121,7 +121,7 @@ for i in range(21):
 		print( str(i) + " hit" )
 		
 
-wins, losses, ties = bj.test_model( "blackjackmodel.1", 10000, True, 1, False )
+wins, losses, ties = bj.test_model( "blackjackmodel.1", 1000, True, 1, False )
 total = wins + losses + ties
 win_percentage = (wins/total)*100.0
 loss_percentage = (losses/total)*100.0
