@@ -1,5 +1,5 @@
 import pygame as pygame
-from blackjack_deck_moh import *
+from blackjack_deck import *
 from constants import *
 import sys
 import time
@@ -19,7 +19,6 @@ json_file.close()
 model = models.model_from_json( loaded_model_json, custom_objects={"GlorotUniform": tf.keras.initializers.glorot_uniform} )
 model.load_weights( "../NN/models/blackjackmodel.5.h5" )
 print( "Model loaded from disk" )
-
 
 NN_YES = True
 ai1_policy = None
@@ -53,7 +52,6 @@ def end_text_objects(text, font, color):
     textSurface = font.render(text, True, color)
     return textSurface, textSurface.get_rect()
 
-
 #game text display
 def game_texts(text, x, y, ai=False):
     TextSurf, TextRect = text_objects(text, textfont)
@@ -63,7 +61,6 @@ def game_texts(text, x, y, ai=False):
     pygame.display.update()
     if ai:
         pygame.time.delay(3000)  # Add a delay for the specified time
-
         # Clear the text after the delay
         pygame.draw.rect(gameDisplay,background_color , TextRect)  # Draw a black rectangle over the text
         pygame.display.update()
@@ -123,10 +120,6 @@ def card_to_index(card_value, suit):
     index = (card_value - 1) * 4 + suit -1
     return index + 2
 
- 
-    
-    
-
 class Params():
     def __init__(self, action_type = "random_policy", filename =  None, state_mapping = 1):
     # 'input', 'random_policy', 'fixed_policy'
@@ -155,32 +148,23 @@ class Play:
         self.dealer = Hand("Dealer")
         self.player1 = Hand()
         self.players = [self.dealer, self.player1]
-      
 
         self.turn = 1
         self.deck.shuffle()
         self.params = params
-
-
-
 
         self.AI_1_HAND = [0]*54 #for Card Counting NN input
         self.AI_2_HAND = [0]*54
         # self.AI_3_HAND = [0]*54
         self.NUM_ROUNDS = 1
 
-
         if params:
             for i, param in enumerate(params):
-
                 if param is not None and param.fixed_policy_filepath:
                     if i == 0:
                         self.player2 = Hand("AI 1", NN = False, params=param)
-
                         self.player2.policy = self.load_policy(self.player2)
                         self.players.append(self.player2)
-                        
-                
 
                     elif i == 1:
                         self.player3 = Hand("AI 2", NN = False, params=param)
@@ -192,12 +176,10 @@ class Play:
                     if i == 0:
                         self.player2 = Hand("AI 1", NN = True, params=None)
                         self.players.append(self.player2)
-                
 
                     elif i == 1:
                         self.player3 = Hand("AI 2", NN = True, params=None)
                         self.players.append(self.player3)
-
 
                 else:
                     print("No file path")
@@ -229,7 +211,6 @@ class Play:
                     start_x = 3 * display_width/4 - total_width/2
                 self.clear_card_areas(start_x, start_y, total_width)
 
-
             if player == 0 and show_dealer == False:
                 for i in range(len(card_images)):
                         card_image = pygame.image.load('img/' + card_images[i] + '.png').convert()
@@ -245,7 +226,6 @@ class Play:
                         gameDisplay.blit(card_image, (start_x + i * (CARD_WIDTH + CARD_SPACING), start_y))
             pygame.display.update()
 
-        
 
     def run_count_update(self, card):
         global run_count
@@ -420,9 +400,6 @@ class Play:
                 print('There is a bug my friend')
 
 
-
-
-
     def deal(self):
         global total_games
         print('===========================================')
@@ -452,15 +429,12 @@ class Play:
         self.AI_2_HAND[0] = self.player1.value
 
         self.AI_1_HAND[1] = self.dealer.value
-        self.AI_2_HAND[1] = self.dealer.value
-        
-            
+        self.AI_2_HAND[1] = self.dealer.value  
 
         print("AI 1's cards are:", self.player2.cards)
         print("AI 2's cards are:", self.player3.cards)
         # print("AI 3's cards are:", self.player4.cards)
         # print(self.AI_3_HAND)
-
 
         self.dealer.display_cards()
         self.player1.display_cards()
@@ -473,7 +447,6 @@ class Play:
             
         # player_card = pygame.image.load('img/' + self.player1.card_img[0] + '.png').convert()
         # player_card_2 = pygame.image.load('img/' + self.player1.card_img[1] + '.png').convert()
-
         
         game_texts("Dealer's hand is:", display_width/2, 55)
         game_texts("AI 1's hand is:", display_width/4, display_height/2-25)
@@ -482,7 +455,6 @@ class Play:
         # gameDisplay.blit(dealer_card, (400, 200))
         # gameDisplay.blit(dealer_card_2, (550, 200))
         self.draw_cards(self.dealer.card_img, 0)
-
 
         game_texts("Your's hand is:", display_width/2, 475)
         
@@ -505,7 +477,6 @@ class Play:
         player.add_card(self.deck.deal())
         self.run_count_update(player.cards[-1])
     
-
         for card in player.cards:
             card_value, suit  = card
             index = card_to_index(card_value, suit)
@@ -586,14 +557,12 @@ class Play:
             time.sleep(2)
             
         player.value = 0
-
-            
+   
     def stand(self, player=None):
         if not player: #not dealer
             player = self.player1
         self.turn += 1  
-        time.sleep(1) 
-
+        time.sleep(1)
 
     def play_dealer(self):
         self.dealer.value = 0
@@ -657,7 +626,6 @@ class Play:
             winners = [player for player in self.players if player.value >= dealer_score and not player.busted]
         else: #tie game without dealer
             winners = [player for player in self.players if player.value > dealer_score and not player.busted]
-
 
         # highest_score = max([player.value for player in self.players if not player.busted], default=0)
         # winners = [player for player in self.players if player.value == highest_score and not player.busted]
@@ -747,10 +715,6 @@ class Play:
         gameDisplay.fill(background_color)
         # pygame.draw.rect(gameDisplay, grey, pygame.Rect(0, 0, 250, 700))
         pygame.display.update()
-    
-    
-
-
 
 def game():
     global ai1_policy, ai2_policy, ai1_statemapping, ai2_statemapping
@@ -904,8 +868,6 @@ def show_policy_selection_screen():
         elif ai1_policy == 'math_policy.policy':
             option_text('Selected', 325, 625, black, select_panel= True)
 
-
-
         if ai2_policy == 'QLearning_policy_mapping_2.policy':
             option_text('Selected', 575, 225, black, select_panel= True)
         elif ai2_policy == 'NN':
@@ -938,8 +900,6 @@ def show_winrate_screen(game_state):
             if event.type == pygame.QUIT:
                 running = False
         button("back", 770, 650, 120, 40, light_slat, dark_slat, game, True)
-
         pygame.display.flip()
-
 
 game()
